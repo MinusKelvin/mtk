@@ -1,16 +1,17 @@
 package minusk.mtk.stage;
 
+import minusk.mtk.property.ColorProperty;
 import minusk.mtk.scene.Node;
-import minusk.mtk.scene.layout.Alignment;
+import minusk.mtk.scene.layout.Position;
 import minusk.mtk.scene.layout.Bin;
+import org.joml.Vector2d;
+import org.joml.Vector2dc;
 import org.joml.Vector2i;
 import org.joml.Vector2ic;
 import org.lwjgl.system.MemoryStack;
 
 import static minusk.mtk.Application.vg;
-import static org.lwjgl.nanovg.NanoVG.nvgBeginFrame;
-import static org.lwjgl.nanovg.NanoVG.nvgEndFrame;
-import static org.lwjgl.nanovg.NanoVG.nvgResetTransform;
+import static org.lwjgl.nanovg.NanoVG.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.glDrawBuffers;
 import static org.lwjgl.opengl.GL30.*;
@@ -22,20 +23,21 @@ import static org.lwjgl.opengl.GL32.glFramebufferTexture;
 public abstract class Stage {
 	static int fbo;
 	
+	public final ColorProperty backgroundColor = new ColorProperty();
 	protected final Vector2i position = new Vector2i(), size = new Vector2i();
 	protected final StageBin root = new StageBin();
 	private final int texture;
 	private boolean renderRequested;
-	private float r,g,b;
 	
 	private Stage(Vector2ic s) {
 		size.set(s);
-		root.resize(size);
+		root.resize(toV2d(size));
 		texture = glGenTextures();
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.x, size.y, 0, GL_RGBA, GL_BYTE, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		renderRequested = true;
+		backgroundColor.addListener(root::requestRender);
 	}
 	
 	public Stage(int width, int height) {
@@ -43,15 +45,9 @@ public abstract class Stage {
 	}
 	
 	public Stage(Node node) {
-		this(node.getMinimumSize());
+		this(toV2i(node.getMinimumSize()));
 		root.setChild(node);
-		root.resize(size);
-	}
-	
-	public void setBackgroundColor(float r, float g, float b) {
-		this.r = r;
-		this.g = g;
-		this.b = b;
+		root.resize(toV2d(size));
 	}
 	
 	/** Internal */
@@ -65,7 +61,7 @@ public abstract class Stage {
 			
 			glViewport(0, 0, size.x, size.y);
 			try (MemoryStack stack = MemoryStack.stackPush()) {
-				glClearBufferfv(GL_COLOR, 0, stack.floats(r, g, b, 1));
+				glClearBufferfv(GL_COLOR, 0, backgroundColor.get(stack.mallocFloat(4)));
 			}
 			
 			nvgBeginFrame(vg(), size.x, size.y, 1);
@@ -76,12 +72,12 @@ public abstract class Stage {
 	}
 	
 	protected void drawContent() {
-		root._render();
+		root.render();
 	}
 	
 	public void setChild(Node node) {
 		root.setChild(node);
-		root.resize(size);
+		root.resize(toV2d(size));
 	}
 	
 	public Node getChild() {
@@ -90,7 +86,7 @@ public abstract class Stage {
 	
 	/** Resizes this stage to something at least as large as its child's minimum size. */
 	public void resize(int width, int height) {
-		Vector2ic msize = root.getMinimumSize();
+		Vector2ic msize = toV2i(root.getMinimumSize());
 		if (msize.x() > width)
 			width = msize.x();
 		if (msize.y() > height)
@@ -98,14 +94,14 @@ public abstract class Stage {
 		if (width == size.x && height == size.y)
 			return;
 		size.set(width, height);
-		root.resize(size);
+		root.resize(new Vector2d(size.x, size.y));
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.x, size.y, 0, GL_RGBA, GL_BYTE, 0);
 	}
 	
 	protected class StageBin extends Bin {
 		private StageBin() {
-			super(Alignment.MIDDLE, Alignment.MIDDLE);
+			super(Position.CENTER, true, true);
 		}
 		
 		@Override
@@ -117,11 +113,20 @@ public abstract class Stage {
 		public void requestReflow() {
 			Stage.this.resize(size.x, size.y);
 			resize(getSize());
+			requestRender();
 		}
 		
 		@Override
-		protected void _render() {
-			super._render();
+		protected void render() {
+			super.render();
 		}
+	}
+	
+	private static Vector2d toV2d(Vector2ic v) {
+		return new Vector2d(v.x(), v.y());
+	}
+	
+	private static Vector2i toV2i(Vector2dc v) {
+		return new Vector2i((int) v.x(), (int) v.y());
 	}
 }

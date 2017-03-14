@@ -1,10 +1,12 @@
 package minusk.mtk.scene.layout;
 
 import minusk.mtk.Application;
-import minusk.mtk.scene.Container;
+import minusk.mtk.property.BooleanProperty;
+import minusk.mtk.property.ObjectProperty;
 import minusk.mtk.scene.Node;
-import org.joml.Vector2i;
-import org.joml.Vector2ic;
+import minusk.mtk.scene.StaticContainer;
+import org.joml.Vector2d;
+import org.joml.Vector2dc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,15 +16,19 @@ import java.util.List;
  * 
  * @author MinusKelvin
  */
-public class Bin extends Container {
+public class Bin extends StaticContainer {
+	public final ObjectProperty<Position> alignment;
+	public final BooleanProperty expandX, expandY;
 	private final ArrayList<Node> list = new ArrayList<>(1);
-	private Alignment horizontal, vertical;
 	private Node child;
 	
-	/** Alignments can be null (prevents expansion) */
-	public Bin(Alignment horizontal, Alignment vertical) {
-		this.horizontal = horizontal;
-		this.vertical = vertical;
+	public Bin(Position alignment, boolean expandX, boolean expandY) {
+		this.alignment = new ObjectProperty<>(false, alignment);
+		this.alignment.addListener(this::requestReflow);
+		this.expandX = new BooleanProperty(expandX);
+		this.expandX.addListener(this::requestReflow);
+		this.expandY = new BooleanProperty(expandY);
+		this.expandY.addListener(this::requestReflow);
 	}
 	
 	public void setChild(Node node) {
@@ -34,27 +40,27 @@ public class Bin extends Container {
 	}
 	
 	@Override
-	public void resize(Vector2ic size) {
+	public void resize(Vector2dc size) {
 		super.resize(size);
 		if (child != null) {
 			child.resize(size);
-			Vector2i dif = getSize().sub(child.getSize(), new Vector2i());
-			if (horizontal != null) {
-				switch (horizontal) {
-					case LOW:
+			Vector2d dif = getSize().sub(child.getSize(), new Vector2d());
+			if (expandX.get()) {
+				switch (alignment.get()) {
+					case TOP_LEFT:case CENTER_LEFT:case BOTTOM_LEFT:
 						dif.x = 0;
 						break;
-					case MIDDLE:
+					case TOP_CENTER:case CENTER:case BOTTOM_CENTER:
 						dif.x /= 2;
 						break;
 				}
 			}
-			if (vertical != null) {
-				switch (vertical) {
-					case LOW:
+			if (expandY.get()) {
+				switch (alignment.get()) {
+					case TOP_LEFT:case TOP_CENTER:case TOP_RIGHT:
 						dif.y = 0;
 						break;
-					case MIDDLE:
+					case CENTER_LEFT:case CENTER:case CENTER_RIGHT:
 						dif.y /= 2;
 						break;
 				}
@@ -72,7 +78,7 @@ public class Bin extends Container {
 	}
 	
 	@Override
-	public Vector2ic getMinimumSize() {
+	public Vector2dc getMinimumSize() {
 		if (child == null)
 			return Application.ZERO;
 		return child.getMinimumSize();
@@ -80,17 +86,12 @@ public class Bin extends Container {
 	
 	@Override
 	public boolean canExpandX() {
-		return horizontal != null;
+		return expandX.get();
 	}
 	
 	@Override
 	public boolean canExpandY() {
-		return vertical != null;
-	}
-	
-	@Override
-	public boolean isMouseTransparent() {
-		return true;
+		return expandY.get();
 	}
 	
 	@Override

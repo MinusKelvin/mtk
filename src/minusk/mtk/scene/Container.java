@@ -1,5 +1,8 @@
 package minusk.mtk.scene;
 
+import org.joml.Vector2d;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import static minusk.mtk.Application.vg;
@@ -20,7 +23,6 @@ public abstract class Container extends Node {
 		node.parent = this;
 		addChild_impl(node);
 		requestReflow();
-		requestRender();
 	}
 	
 	/** Must make the node a child of this container. */
@@ -33,7 +35,6 @@ public abstract class Container extends Node {
 		node.parent = null;
 		removeChild_impl(node);
 		requestReflow();
-		requestRender();
 	}
 	
 	/** Must remove the node from this container. */
@@ -48,12 +49,21 @@ public abstract class Container extends Node {
 	}
 	
 	@Override
-	protected void _render() {
+	protected void render() {
 		for (Node node : getChildren()) {
 			nvgSave(vg());
-			nvgTranslate(vg(), node.getPosition().x(), node.getPosition().y());
-			node._render();
+			nvgTranslate(vg(), (float) node.getPosition().x(), (float) node.getPosition().y());
+			node.render();
 			nvgRestore(vg());
+		}
+	}
+	
+	@Override
+	void findNodesByPoint(Vector2d p, ArrayList<Node> nodes) {
+		super.findNodesByPoint(p, nodes);
+		for (Node node : getChildren()) {
+			node.findNodesByPoint(p.add(node.getPosition()), nodes);
+			p.sub(node.getPosition());
 		}
 	}
 	

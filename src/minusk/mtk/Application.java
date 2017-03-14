@@ -1,21 +1,28 @@
 package minusk.mtk;
 
 import minusk.mtk.stage.PrimaryStage;
-import org.joml.Vector2i;
-import org.joml.Vector2ic;
+import org.joml.Vector2d;
+import org.joml.Vector2dc;
 import org.lwjgl.glfw.GLFWErrorCallback;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Locale;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.nanovg.NanoVG.nvgCreateFontMem;
 import static org.lwjgl.nanovg.NanoVGGL3.NVG_ANTIALIAS;
 import static org.lwjgl.nanovg.NanoVGGL3.nvgCreate;
+import static org.lwjgl.system.jemalloc.JEmalloc.je_free;
+import static org.lwjgl.system.jemalloc.JEmalloc.je_malloc;
+import static org.lwjgl.system.jemalloc.JEmalloc.je_realloc;
 
 /**
  * @author MinusKelvin
  */
 public abstract class Application {
-	public static final Vector2ic ZERO = new Vector2i(0,0);
+	public static final Vector2dc ZERO = new Vector2d(0,0);
 	
 	private static Application app;
 	private static PrimaryStage primaryStage;
@@ -36,9 +43,26 @@ public abstract class Application {
 			throw new RuntimeException("Failed to initialize GLFW");
 		
 		primaryStage = PrimaryStage._create();
-		app.start();
-		
 		nvgContext = nvgCreate(NVG_ANTIALIAS);
+		try {
+			InputStream file = Application.class.getResourceAsStream("/minusk/mtk/res/DejaVuSans.ttf");
+			byte[] bytes = new byte[1024];
+			int count;
+			ByteBuffer stuff = je_malloc(0);
+			
+			while ((count = file.read(bytes)) != -1) {
+				int pos = stuff.remaining();
+				stuff = je_realloc(stuff, pos + count);
+				stuff.position(pos);
+				stuff.put(bytes, 0, count);
+				stuff.position(0);
+			}
+			nvgCreateFontMem(nvgContext, "sans", stuff, 0);
+			je_free(stuff);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		app.start();
 		
 		primaryStage.show();
 		

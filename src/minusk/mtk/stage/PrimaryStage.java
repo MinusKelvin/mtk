@@ -1,7 +1,7 @@
 package minusk.mtk.stage;
 
 import minusk.mtk.Application;
-import org.joml.Vector2ic;
+import org.joml.Vector2dc;
 import org.lwjgl.opengl.GL;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -22,14 +22,15 @@ public final class PrimaryStage extends Stage {
 		glfwSetWindowCloseCallback(window, this::close);
 		glfwSetFramebufferSizeCallback(window, this::fboSize);
 		
-		Vector2ic msize = root.getMinimumSize();
-		glfwSetWindowSizeLimits(window, msize.x(),  msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
+		Vector2dc msize = root.getMinimumSize();
+		glfwSetWindowSizeLimits(window, (int) msize.x(), (int) msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
 	}
 	
 	public void show() {
 		glfwShowWindow(window);
 	}
 	
+	/** Internal */
 	@Override
 	public void _render() {
 		super._render();
@@ -45,8 +46,8 @@ public final class PrimaryStage extends Stage {
 	public void resize(int width, int height) {
 		super.resize(width, height);
 		glfwSetWindowSize(window, size.x, size.y);
-		Vector2ic msize = root.getMinimumSize();
-		glfwSetWindowSizeLimits(window, msize.x(),  msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
+		Vector2dc msize = root.getMinimumSize();
+		glfwSetWindowSizeLimits(window, (int) msize.x(),  (int) msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
 	}
 	
 	private void close(long window) {
