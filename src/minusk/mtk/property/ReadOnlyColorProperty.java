@@ -1,5 +1,6 @@
 package minusk.mtk.property;
 
+import org.joml.Vector4fc;
 import org.lwjgl.nanovg.NVGColor;
 
 import java.nio.FloatBuffer;
@@ -14,6 +15,7 @@ public interface ReadOnlyColorProperty extends IProperty {
 	float getA();
 	NVGColor get(NVGColor dest);
 	FloatBuffer get(FloatBuffer dest);
+	Vector4fc get();
 	void addListener(ChangeListener listener);
 	void removeListener(ChangeListener listener);
 	

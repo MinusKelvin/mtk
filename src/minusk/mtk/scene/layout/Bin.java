@@ -24,11 +24,11 @@ public class Bin extends StaticContainer {
 	
 	public Bin(Position alignment, boolean expandX, boolean expandY) {
 		this.alignment = new ObjectProperty<>(false, alignment);
-		this.alignment.addListener(this::requestReflow);
+		this.alignment.addListener(requestReflowListener);
 		this.expandX = new BooleanProperty(expandX);
-		this.expandX.addListener(this::requestReflow);
+		this.expandX.addListener(requestReflowListener);
 		this.expandY = new BooleanProperty(expandY);
-		this.expandY.addListener(this::requestReflow);
+		this.expandY.addListener(requestReflowListener);
 	}
 	
 	public void setChild(Node node) {

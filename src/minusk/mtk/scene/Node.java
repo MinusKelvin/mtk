@@ -1,5 +1,6 @@
 package minusk.mtk.scene;
 
+import minusk.mtk.property.IProperty;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
 
@@ -9,6 +10,9 @@ import java.util.ArrayList;
  * @author MinusKelvin
  */
 public abstract class Node {
+	public final IProperty.InvalidateListener requestReflowListener = this::requestReflow;
+	public final IProperty.InvalidateListener requestRenderListener = this::requestRender;
+	
 	private final Vector2d position = new Vector2d(), size = new Vector2d();
 	Container parent;
 	

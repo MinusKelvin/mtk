@@ -1,12 +1,13 @@
 package minusk.mtk.test;
 
 import minusk.mtk.Application;
+import minusk.mtk.animation.ColorLerpAnimation;
 import minusk.mtk.scene.StaticNode;
-import minusk.mtk.scene.layout.Bin;
-import minusk.mtk.scene.layout.Position;
 import minusk.mtk.scene.stateless.Text;
+import minusk.mtk.style.TextStyle;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
+import org.joml.Vector4f;
 import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.system.MemoryStack;
 
@@ -18,10 +19,17 @@ import static org.lwjgl.nanovg.NanoVG.*;
 public class Test extends Application {
 	@Override
 	public void start() {
-		Bin b = new Bin(Position.CENTER, true, true);
-		b.setChild(new Text("Testing", 250));
+		Text b = new Text("Testing");
+		TextStyle.DEFAULT.blur.set(5);
 		Application.getPrimaryStage().setChild(b);
-		Application.getPrimaryStage().backgroundColor.set(0, 1, 0, 1);
+		Application.getPrimaryStage().backgroundColor.set(1, 1, 1, 1);
+		final ColorLerpAnimation a1 = new ColorLerpAnimation(TextStyle.DEFAULT.color,
+				new Vector4f(1,0,0,1), new Vector4f(0,0,1,1), 1);
+		final ColorLerpAnimation a2 = new ColorLerpAnimation(TextStyle.DEFAULT.color,
+				new Vector4f(0,0,1,1), new Vector4f(1,0,0,1), 0.25f);
+		a1.addStopListener(a2::start);
+		a2.addStopListener(a1::start);
+		a1.start();
 	}
 	
 	public static void main(String[] args) {

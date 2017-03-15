@@ -27,7 +27,7 @@ public abstract class Stage {
 	protected final Vector2i position = new Vector2i(), size = new Vector2i();
 	protected final StageBin root = new StageBin();
 	private final int texture;
-	private boolean renderRequested;
+	private boolean renderRequested = true;
 	
 	private Stage(Vector2ic s) {
 		size.set(s);
@@ -37,7 +37,7 @@ public abstract class Stage {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.x, size.y, 0, GL_RGBA, GL_BYTE, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		renderRequested = true;
-		backgroundColor.addListener(root::requestRender);
+		backgroundColor.addListener(root.requestRenderListener);
 	}
 	
 	public Stage(int width, int height) {
@@ -53,6 +53,7 @@ public abstract class Stage {
 	/** Internal */
 	public void _render() {
 		if (renderRequested) {
+			renderRequested = false;
 			if (fbo == 0)
 				fbo = glGenFramebuffers();
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -97,6 +98,7 @@ public abstract class Stage {
 		root.resize(new Vector2d(size.x, size.y));
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.x, size.y, 0, GL_RGBA, GL_BYTE, 0);
+		renderRequested = true;
 	}
 	
 	protected class StageBin extends Bin {

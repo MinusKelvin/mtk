@@ -40,6 +40,8 @@ public final class PrimaryStage extends Stage {
 		glBlitFramebuffer(0, 0, size.x, size.y, 0, 0, size.x, size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		
 		glfwSwapBuffers(window);
+		
+		System.gc();
 	}
 	
 	@Override

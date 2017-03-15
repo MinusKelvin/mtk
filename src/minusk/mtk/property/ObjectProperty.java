@@ -1,13 +1,15 @@
 package minusk.mtk.property;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
  * @author MinusKelvin
  */
 public class ObjectProperty<T> extends Property implements ReadOnlyObjectProperty<T> {
-	private final List<ChangeListener<? super T>> changeListeners = new ArrayList<>();
+	private final List<WeakReference<ChangeListener<? super T>>> changeListeners = new ArrayList<>();
 	private final boolean allowNull;
 	private T value;
 	
@@ -24,19 +26,25 @@ public class ObjectProperty<T> extends Property implements ReadOnlyObjectPropert
 	
 	@Override
 	public void addListener(ChangeListener<? super T> listener) {
-		changeListeners.add(listener);
+		changeListeners.add(new WeakReference<>(listener));
 	}
 	
 	@Override
 	public void removeListener(ChangeListener<? super T> listener) {
-		changeListeners.remove(listener);
+		changeListeners.removeIf(e -> e.get() == listener);
 	}
 	
 	public void set(T value) {
 		if (!allowNull && value == null)
 			throw new NullPointerException("value cannot be null");
 		this.value = value;
-		changeListeners.forEach(l -> l.onChange(value));
+		for (Iterator<WeakReference<ChangeListener<? super T>>> iter = changeListeners.iterator(); iter.hasNext();) {
+			ChangeListener<? super T> e = iter.next().get();
+			if (e == null)
+				iter.remove();
+			else
+				e.onChange(value);
+		}
 		invalidate();
 	}
 	

@@ -1,5 +1,6 @@
 package minusk.mtk;
 
+import minusk.mtk.animation.Animation;
 import minusk.mtk.stage.PrimaryStage;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
@@ -8,15 +9,15 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Locale;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.nanovg.NanoVG.nvgCreateFontMem;
 import static org.lwjgl.nanovg.NanoVGGL3.NVG_ANTIALIAS;
 import static org.lwjgl.nanovg.NanoVGGL3.nvgCreate;
-import static org.lwjgl.system.jemalloc.JEmalloc.je_free;
-import static org.lwjgl.system.jemalloc.JEmalloc.je_malloc;
-import static org.lwjgl.system.jemalloc.JEmalloc.je_realloc;
+import static org.lwjgl.system.jemalloc.JEmalloc.*;
 
 /**
  * @author MinusKelvin
@@ -26,6 +27,8 @@ public abstract class Application {
 	
 	private static Application app;
 	private static PrimaryStage primaryStage;
+	private static ArrayList<Animation> animations = new ArrayList<>();
+	private static ArrayList<Animation> toAdd = new ArrayList<>();
 	private static boolean running;
 	private static double frameDelta;
 	private static long nvgContext;
@@ -71,6 +74,11 @@ public abstract class Application {
 			double c = glfwGetTime();
 			frameDelta = c - t;
 			t = c;
+			animations.addAll(toAdd);
+			toAdd.clear();
+			for (Iterator<Animation> iter = animations.iterator(); iter.hasNext();)
+				if (iter.next()._tick())
+					iter.remove();
 			primaryStage._render();
 			glfwPollEvents();
 		}
@@ -87,6 +95,12 @@ public abstract class Application {
 	}
 	
 	public abstract void start();
+	
+	/** Internal */
+	public static void _addAnimation(Animation animation) {
+		if (!animations.contains(animation) && !toAdd.contains(animation))
+			toAdd.add(animation);
+	}
 	
 	private static void glfwError(int errorcode, long description) {
 		throw new RuntimeException(String.format(Locale.US, "GLFW Error Code %X: %s",
