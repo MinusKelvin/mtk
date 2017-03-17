@@ -1,6 +1,6 @@
 package minusk.mtk.animation;
 
-import minusk.mtk.Application;
+import minusk.mtk.core.Application;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +9,15 @@ import java.util.List;
  * @author MinusKelvin
  */
 public abstract class Animation {
-	private List<StartListener> startListeners = new ArrayList<>();
-	private List<StopListener> stopListeners = new ArrayList<>();
-	private boolean playing;
+	private final List<StartListener> startListeners = new ArrayList<>();
+	private final List<StopListener> stopListeners = new ArrayList<>();
+	private final boolean shouldBeUpdated;
+	private boolean playing, looping;
+	
+	/** @param shouldBeUpdated flag on whether <code>update()</code> should be called */
+	public Animation(boolean shouldBeUpdated) {
+		this.shouldBeUpdated = shouldBeUpdated;
+	}
 	
 	/** Internal */
 	public boolean _tick() {
@@ -28,7 +34,8 @@ public abstract class Animation {
 	protected abstract void finish();
 	
 	public void start() {
-		Application._addAnimation(this);
+		if (shouldBeUpdated)
+			Application._addAnimation(this);
 		stop();
 		playing = true;
 		begin();
@@ -38,11 +45,19 @@ public abstract class Animation {
 	/** Called when this animation is started. */
 	protected abstract void begin();
 	
+	/** Stops the current play of this animation. Does not stop looping. */
 	public void stop() {
 		if (playing) {
 			finish();
 			stopListeners.forEach(StopListener::onStop);
+			playing = false;
+			if (looping)
+				start();
 		}
+	}
+	
+	/** Cancels this animation. Stops it without calling <code>finish()</code> or any <code>StopListener</code>s */
+	public void cancel() {
 		playing = false;
 	}
 	
@@ -60,6 +75,17 @@ public abstract class Animation {
 	
 	public void removetopListener(StopListener listener) {
 		stopListeners.remove(listener);
+	}
+	
+	/** Plays this animation on a loop. */
+	public void loop() {
+		looping = true;
+		start();
+	}
+	
+	/** Stops looping this animation. The current play of the animation will continue. */
+	public void stopLooping() {
+		looping = false;
 	}
 	
 	public interface StartListener {

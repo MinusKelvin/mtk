@@ -1,21 +1,20 @@
 package minusk.mtk.animation;
 
 import minusk.mtk.core.Application;
-import minusk.mtk.property.ColorProperty;
+import minusk.mtk.property.FloatProperty;
 import org.joml.Vector4f;
-import org.joml.Vector4fc;
 
 /**
  * @author MinusKelvin
  */
-public class ColorLerpAnimation extends Animation {
-	private final ColorProperty target;
-	private final Vector4fc from, to;
+public class FloatLerpAnimation extends Animation {
+	private final FloatProperty target;
+	private final float from, to;
 	private final Vector4f lerper = new Vector4f();
 	private final float length;
 	private float alpha;
 	
-	public ColorLerpAnimation(ColorProperty target, Vector4fc from, Vector4fc to, float length) {
+	public FloatLerpAnimation(FloatProperty target, float from, float to, float length) {
 		super(true);
 		this.target = target;
 		this.from = from;
@@ -28,7 +27,7 @@ public class ColorLerpAnimation extends Animation {
 		alpha += Application.getDelta() / length;
 		if (alpha > 1)
 			alpha = 1;
-		target.set(from.lerp(to, alpha, lerper));
+		target.set(alpha * to + from * (1-alpha));
 		if (alpha == 1)
 			stop();
 	}

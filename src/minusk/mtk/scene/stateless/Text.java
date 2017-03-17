@@ -1,9 +1,9 @@
 package minusk.mtk.scene.stateless;
 
 import minusk.mtk.property.ObjectProperty;
-import minusk.mtk.property.StyleProperty;
-import minusk.mtk.scene.StaticNode;
+import minusk.mtk.scene.Node;
 import minusk.mtk.style.TextStyle;
+import org.joml.Vector2d;
 import org.joml.Vector2dc;
 
 /**
@@ -11,9 +11,10 @@ import org.joml.Vector2dc;
  * 
  * @author MinusKelvin
  */
-public class Text extends StaticNode {
+public class Text extends Node {
 	public final ObjectProperty<String> text;
-	public final StyleProperty<Text, ? extends TextStyle> style;
+	private TextStyle style;
+	private final Vector2d msize = new Vector2d();
 	
 	public Text() {
 		this("");
@@ -26,13 +27,31 @@ public class Text extends StaticNode {
 	public Text(String text, TextStyle style) {
 		this.text = new ObjectProperty<>(false, text);
 		this.text.addListener(requestReflowListener);
-		this.style = new StyleProperty<>(this, style);
-		this.style.addListener(requestReflowListener);
+		this.text.addListener(this::calcMinSize);
+		this.style = style;
+		style.apply(this);
+		calcMinSize();
+	}
+	
+	public void setStyle(TextStyle style) {
+		this.style.unapply(this);
+		this.style = style;
+		style.apply(this);
+		calcMinSize();
+		requestReflow();
+	}
+	
+	private void calcMinSize() {
+		msize.set(style.getMinimumSize(text.get()));
+	}
+	
+	public TextStyle getStyle() {
+		return style;
 	}
 	
 	@Override
 	public Vector2dc getMinimumSize() {
-		return style.get().getMinimumSize(text.get());
+		return msize;
 	}
 	
 	@Override
@@ -47,6 +66,6 @@ public class Text extends StaticNode {
 	
 	@Override
 	protected void render() {
-		style.get().render(text.get());
+		style.render(text.get());
 	}
 }

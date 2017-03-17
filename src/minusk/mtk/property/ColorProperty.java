@@ -4,10 +4,8 @@ import org.joml.Vector4f;
 import org.joml.Vector4fc;
 import org.lwjgl.nanovg.NVGColor;
 
-import java.lang.ref.WeakReference;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.lwjgl.nanovg.NanoVG.nvgRGBAf;
@@ -16,7 +14,7 @@ import static org.lwjgl.nanovg.NanoVG.nvgRGBAf;
  * @author MinusKelvin
  */
 public class ColorProperty extends Property implements ReadOnlyColorProperty {
-	private final List<WeakReference<ChangeListener>> changeListeners = new ArrayList<>();
+	private final List<ChangeListener> changeListeners = new ArrayList<>();
 	private final Vector4f color = new Vector4f();
 	
 	/** Initializes to black */
@@ -34,12 +32,12 @@ public class ColorProperty extends Property implements ReadOnlyColorProperty {
 	
 	@Override
 	public void addListener(ChangeListener listener) {
-		changeListeners.add(new WeakReference<>(listener));
+		changeListeners.add(listener);
 	}
 	
 	@Override
 	public void removeListener(ChangeListener listener) {
-		changeListeners.removeIf(e -> e.get() == listener);
+		changeListeners.remove(listener);
 	}
 	
 	public void set(Vector4fc color) {
@@ -48,13 +46,7 @@ public class ColorProperty extends Property implements ReadOnlyColorProperty {
 	
 	public void set(float r, float g, float b, float a) {
 		color.set(r,g,b,a);
-		for (Iterator<WeakReference<ChangeListener>> iter = changeListeners.iterator(); iter.hasNext();) {
-			ChangeListener e = iter.next().get();
-			if (e == null)
-				iter.remove();
-			else
-				e.onChange(r,g,b,a);
-		}
+		changeListeners.forEach(l -> l.onChange(r,g,b,a));
 		invalidate();
 	}
 	

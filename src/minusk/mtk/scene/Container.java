@@ -5,7 +5,7 @@ import org.joml.Vector2d;
 import java.util.ArrayList;
 import java.util.List;
 
-import static minusk.mtk.Application.vg;
+import static minusk.mtk.core.Application.vg;
 import static org.lwjgl.nanovg.NanoVG.nvgRestore;
 import static org.lwjgl.nanovg.NanoVG.nvgSave;
 import static org.lwjgl.nanovg.NanoVG.nvgTranslate;

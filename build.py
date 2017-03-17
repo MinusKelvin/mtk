@@ -201,6 +201,7 @@ try:
 	args = sys.argv[1:]
 	if len(args) == 0:
 		print "No tasks specified."
+		print "Run 'tasks' to see available tasks"
 	else:
 		for task in args:
 			executeTask(task)
