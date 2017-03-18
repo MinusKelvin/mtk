@@ -166,6 +166,12 @@ public abstract class Node {
 		return position;
 	}
 	
+	public Vector2d getScreenPosition() {
+		if (parent == null)
+			return new Vector2d();
+		return parent.getScreenPosition().add(getPosition());
+	}
+	
 	public Vector2dc getSize() {
 		return size;
 	}

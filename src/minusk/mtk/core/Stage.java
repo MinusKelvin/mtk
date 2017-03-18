@@ -3,7 +3,7 @@ package minusk.mtk.core;
 import minusk.mtk.property.ColorProperty;
 import minusk.mtk.scene.Node;
 import minusk.mtk.scene.layout.Bin;
-import minusk.mtk.scene.layout.Position;
+import org.joml.Vector2d;
 import org.joml.Vector2dc;
 import org.joml.Vector2i;
 import org.joml.Vector2ic;
@@ -23,17 +23,17 @@ public abstract class Stage {
 	static int fbo;
 	
 	public final ColorProperty backgroundColor = new ColorProperty();
-	protected final Vector2i position = new Vector2i(), size = new Vector2i();
-	protected final StageBin root = new StageBin();
-	private int texture = -1, stencilTex = -1;
+	final StageBin root = new StageBin();
+	final Vector2i position = new Vector2i(), size = new Vector2i();
+	boolean shown = false;
+	private final Vector2d lsize = new Vector2d();
+	int texture = -1;
+	private int stencilTex = -1;
 	private boolean renderRequested = true, reflowRequested, needTextureResize = true;
 	
-	private Stage(Vector2ic s) {
+	Stage(Vector2ic s) {
 		size.set(s);
-		texture = glGenTextures();
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		stencilTex = glGenTextures();
+		lsize.set(Application.toLogical(size));
 		backgroundColor.addListener(root.requestRenderListener);
 		root.requestReflow();
 	}
@@ -49,10 +49,21 @@ public abstract class Stage {
 	
 	void render() {
 		if (reflowRequested) {
+			Vector2dc ms = root.getMinimumSize();
+			lsize.set(Application.toLogical(size));
+			double w = lsize.x, h = lsize.y;
+			if (ms.x() > lsize.x)
+				w = Application.alignPhysical(ms.x());
+			if (ms.y() > lsize.y)
+				h = Application.alignPhysical(ms.y());
+			if (w != lsize.x || h != lsize.y)
+				resize(w, h);
+			onReflow();
 			reflowRequested = false;
 			renderRequested = true;
-			onReflow();
 			root.resize(Application.toLogical(size));
+			if (!root.getSize().equals(Application.toLogical(size)))
+				resize(root.getSize().x(), root.getSize().y());
 		}
 		if (renderRequested) {
 			if (needTextureResize) {
@@ -83,10 +94,35 @@ public abstract class Stage {
 		}
 	}
 	
-	abstract void onReflow();
+	public void show() {
+		texture = glGenTextures();
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		stencilTex = glGenTextures();
+		needTextureResize = true;
+		renderRequested = true;
+		root.requestReflow();
+		Application.addStage(this);
+		shown = true;
+	}
+	
+	public void close() {
+		if (!shown)
+			return;
+		shown = false;
+		glDeleteTextures(texture);
+		glDeleteTextures(stencilTex);
+		Application.removeStage(this);
+	}
+	
+	void onReflow() {}
 	
 	void drawContent() {
 		root.render();
+	}
+	
+	boolean hasShadow() {
+		return true;
 	}
 	
 	public void setTitle(String title) {}
@@ -106,6 +142,7 @@ public abstract class Stage {
 			width = msize.x();
 		if (msize.y() > height)
 			height = msize.y();
+		lsize.set(Application.alignPhysical(width), Application.alignPhysical(height));
 		if (Application.toPhysical(width) == size.x && Application.toPhysical(height) == size.y)
 			return;
 		size.set(Application.toPhysical(width), Application.toPhysical(height));
@@ -114,11 +151,15 @@ public abstract class Stage {
 		renderRequested = true;
 	}
 	
-	protected class StageBin extends Bin {
-		private StageBin() {
-			super(Position.CENTER, true, true);
-		}
-		
+	public void setPosition(double x, double y) {
+		position.set(Application.toPhysical(x), Application.toPhysical(y));
+	}
+	
+	public Vector2ic getPhysicalSize() {
+		return size;
+	}
+	
+	class StageBin extends Bin {
 		@Override
 		public void requestRender() {
 			renderRequested = true;
@@ -133,6 +174,11 @@ public abstract class Stage {
 		@Override
 		protected void render() {
 			super.render();
+		}
+		
+		@Override
+		public Vector2d getScreenPosition() {
+			return Application.toLogical(position).add(getPosition());
 		}
 	}
 }

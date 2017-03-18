@@ -9,11 +9,7 @@ import org.joml.Vector2dc;
 import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.system.MemoryStack;
 
-import java.lang.ref.WeakReference;
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 import static minusk.mtk.core.Application.vg;
 import static org.lwjgl.nanovg.NanoVG.*;
@@ -23,12 +19,10 @@ import static org.lwjgl.nanovg.NanoVG.*;
  * 
  * @author MinusKelvin
  */
-public class TextStyle implements Style<Text> {
+public class TextStyle extends Style<Text> {
 	public final ColorProperty color = new ColorProperty();
-	public final FloatProperty size = new FloatProperty(60);
+	public final FloatProperty size = new FloatProperty(16);
 	public final FloatProperty blur = new FloatProperty();
-	
-	private final List<WeakReference<Text>> nodes = new ArrayList<>();
 	
 	public TextStyle() {
 		color.addListener(this::requestRenderCB);
@@ -62,36 +56,6 @@ public class TextStyle implements Style<Text> {
 			nvgFillColor(vg(), color.get(NVGColor.mallocStack()));
 			nvgText(vg(), -buf.get(0), -buf.get(1), text);
 		}
-	}
-	
-	private void requestRenderCB() {
-		for (Iterator<WeakReference<Text>> iter = nodes.iterator(); iter.hasNext();) {
-			Text node = iter.next().get();
-			if (node == null)
-				iter.remove();
-			else
-				node.requestRender();
-		}
-	}
-	
-	private void requestReflowCB() {
-		for (Iterator<WeakReference<Text>> iter = nodes.iterator(); iter.hasNext();) {
-			Text node = iter.next().get();
-			if (node == null)
-				iter.remove();
-			else
-				node.requestReflow();
-		}
-	}
-	
-	@Override
-	public void apply(Text node) {
-		nodes.add(new WeakReference<>(node));
-	}
-	
-	@Override
-	public void unapply(Text node) {
-		nodes.removeIf(e -> e.get() == node || e.get() == null);
 	}
 	
 	/** Style intended for normal text */

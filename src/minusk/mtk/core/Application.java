@@ -1,15 +1,19 @@
 package minusk.mtk.core;
 
 import minusk.mtk.animation.Animation;
-import org.joml.Vector2d;
-import org.joml.Vector2dc;
-import org.joml.Vector2i;
-import org.joml.Vector2ic;
+import minusk.mtk.gl.ShaderProgram;
+import minusk.mtk.scene.Node;
+import org.joml.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.nanovg.NVGColor;
+import org.lwjgl.nanovg.NVGPaint;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryStack;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.Math;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -17,11 +21,12 @@ import java.util.Locale;
 import java.util.PriorityQueue;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.nanovg.NanoVG.nvgCreateFontMem;
+import static org.lwjgl.nanovg.NanoVG.*;
 import static org.lwjgl.nanovg.NanoVGGL3.NVG_ANTIALIAS;
 import static org.lwjgl.nanovg.NanoVGGL3.nvgCreate;
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_NEAREST;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.system.jemalloc.JEmalloc.*;
 
@@ -32,13 +37,24 @@ public abstract class Application {
 	public static final Vector2dc ZERO = new Vector2d(0,0);
 	
 	private static Application app;
-	private static PrimaryStage primaryStage;
+	
 	private static ArrayList<Animation> animations = new ArrayList<>();
 	private static ArrayList<Animation> toAdd = new ArrayList<>();
 	private static PriorityQueue<Timer> timers = new PriorityQueue<>();
+	
+	private static PrimaryStage primaryStage;
+	private static ArrayList<Stage> stages = new ArrayList<>();
+	private static ShaderProgram copyShader;
+	private static Matrix4f pixelSpace = new Matrix4f();
+	private static int vao, vbo;
+	
 	private static boolean running;
-	private static double frameDelta;
+	private static double frameDelta, scalingFactor=1;
 	private static long nvgContext, window;
+	
+	private static Node mouseNode;
+	private static boolean[] dragging = new boolean[3];
+	private static double currentX, currentY;
 	
 	/** Starts the application */
 	public static void launch(Application app, String[] args) {
@@ -64,7 +80,20 @@ public abstract class Application {
 		glfwMakeContextCurrent(window);
 		GL.createCapabilities();
 		
+		try {
+			copyShader = new ShaderProgram(new InputStreamReader(Application.class.getResourceAsStream("/minusk/mtk/res/passthrough.vs.glsl")),
+					new InputStreamReader(Application.class.getResourceAsStream("/minusk/mtk/res/copy.fs.glsl")));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		
+		vao = glGenVertexArrays();
+		
+		vbo = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		
 		primaryStage = new PrimaryStage(window, w, h);
+		stages.add(primaryStage);
 		nvgContext = nvgCreate(NVG_ANTIALIAS);
 		try {
 			InputStream file = Application.class.getResourceAsStream("/minusk/mtk/res/DejaVuSans.ttf");
@@ -105,6 +134,65 @@ public abstract class Application {
 		}
 	}
 	
+	static void render() {
+		drawStage(primaryStage);
+		stages.forEach(Application::drawStage);
+		
+		glfwSwapBuffers(window);
+	}
+	
+	private static void drawStage(Stage stage) {
+		stage.render();
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, primaryStage.size.x, primaryStage.size.y);
+		
+		if (stage.hasShadow()) {
+			nvgBeginFrame(nvgContext, (int) Application.toLogical(primaryStage.size.x),
+					(int) Application.toLogical(primaryStage.size.y), (float) getScalingFactor());
+			nvgBeginPath(nvgContext);
+			nvgRect(nvgContext, (float) Application.toLogical(stage.position.x)-10, (float) Application.toLogical(stage.position.y)-10,
+					(float) Application.toLogical(stage.size.x)+20, (float) Application.toLogical(stage.size.y)+20);
+			nvgRect(nvgContext, (float) Application.toLogical(stage.position.x), (float) Application.toLogical(stage.position.y),
+					(float) Application.toLogical(stage.size.x), (float) Application.toLogical(stage.size.y));
+			nvgPathWinding(nvgContext, NVG_CW);
+			try (MemoryStack stack = MemoryStack.stackPush()) {
+				nvgFillPaint(nvgContext, nvgBoxGradient(nvgContext,
+						(float) Application.toLogical(stage.position.x)-5, (float) Application.toLogical(stage.position.y)-5,
+						(float) Application.toLogical(stage.size.x)+10, (float) Application.toLogical(stage.size.y)+10,
+						4, 10, nvgRGBAf(0,0,0,0.25f, NVGColor.mallocStack()),
+						nvgRGBAf(0,0,0,0, NVGColor.mallocStack()), NVGPaint.mallocStack()));
+			}
+			nvgFill(nvgContext);
+			nvgEndFrame(nvgContext);
+		}
+		
+		pixelSpace.setOrtho2D(0, primaryStage.size.x, primaryStage.size.y, 0);
+		glBindVertexArray(vao);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, new float[] {
+				stage.position.x, stage.position.y,
+				stage.position.x+stage.size.x,stage.position.y,
+				stage.position.x,stage.position.y+stage.size.y,
+				stage.position.x+stage.size.x,stage.position.y+stage.size.y
+		}, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+		glEnableVertexAttribArray(0);
+		
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
+		glBindTexture(GL_TEXTURE_2D, stage.texture);
+		copyShader.bind();
+		try (MemoryStack stack = MemoryStack.stackPush()) {
+			glUniformMatrix4fv(glGetUniformLocation(copyShader.id, "proj"), false, pixelSpace.get(stack.mallocFloat(16)));
+		}
+		glUniform1f(glGetUniformLocation(copyShader.id, "alpha"), 1);
+		
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+	
 	/** Quits the application without any checks */
 	public static void quit() {
 		running = false;
@@ -139,15 +227,14 @@ public abstract class Application {
 				errorcode, GLFWErrorCallback.getDescription(description)));
 	}
 	
-	static void render() {
-		primaryStage.render();
-		
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, Stage.fbo);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, primaryStage.size.x, primaryStage.size.y,
-				0, 0, primaryStage.size.x, primaryStage.size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		
-		glfwSwapBuffers(window);
+	static void addStage(Stage stage) {
+		if (stage != primaryStage)
+			stages.add(stage);
+	}
+	
+	static void removeStage(Stage stage) {
+		stages.remove(stage);
+//		mousePosition(currentX, currentY);
 	}
 	
 	public static Application getApp() {
@@ -168,9 +255,16 @@ public abstract class Application {
 		return nvgContext;
 	}
 	
+	/** Sets the scaling factor */
+	public static void setScalingFactor(double s) {
+		scalingFactor = s;
+		for (Stage stage : stages)
+			stage.root.requestReflow();
+	}
+	
 	/** Gets the scaling factor of the application. */
 	public static double getScalingFactor() {
-		return 2;
+		return scalingFactor;
 	}
 	
 	/** Converts the given logical coordinate to a physical coordinate. */
@@ -191,6 +285,11 @@ public abstract class Application {
 	/** Converts the given physical coordinate to a logical coordinate. */
 	public static Vector2d toLogical(Vector2ic physical) {
 		return new Vector2d(toLogical(physical.x()), toLogical(physical.y()));
+	}
+	
+	/** Aligns the given logical coordinate to a physical coordinate. */
+	public static double alignPhysical(double logical) {
+		return toLogical(toPhysical(logical));
 	}
 	
 	private static class Timer {

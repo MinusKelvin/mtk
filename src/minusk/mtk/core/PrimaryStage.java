@@ -19,10 +19,19 @@ final class PrimaryStage extends Stage {
 		glfwSetWindowRefreshCallback(window, this::winRefresh);
 		
 		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
+		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+		if (!root.canExpandX())
+			x = msize.x();
+		if (!root.canExpandY())
+			y = msize.y();
+		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
 	}
 	
+	@Override
 	public void show() {
+		if (shown)
+			return;
+		super.show();
 		glfwShowWindow(window);
 	}
 	
@@ -31,18 +40,43 @@ final class PrimaryStage extends Stage {
 		super.resize(width, height);
 		glfwSetWindowSize(window, size.x, size.y);
 		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
+		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+		if (!root.canExpandX())
+			x = msize.x();
+		if (!root.canExpandY())
+			y = msize.y();
+		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
 	}
 	
 	@Override
 	protected void onReflow() {
 		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), GLFW_DONT_CARE, GLFW_DONT_CARE);
+		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+		if (!root.canExpandX())
+			x = msize.x();
+		if (!root.canExpandY())
+			y = msize.y();
+		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
+	}
+	
+	@Override
+	public void setPosition(double x, double y) {
+		throw new IllegalStateException("Cannot change the position of the primary stage.");
+	}
+	
+	@Override
+	public void close() {
+		Application.getApp().close();
 	}
 	
 	@Override
 	public void setTitle(String title) {
 		glfwSetWindowTitle(window, title);
+	}
+	
+	@Override
+	boolean hasShadow() {
+		return false;
 	}
 	
 	private void close(long window) {
