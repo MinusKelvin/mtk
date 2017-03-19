@@ -57,11 +57,21 @@ public class BinStyle extends Style<Bin> {
 		}
 	}
 	
-	public Vector2d getMinimumSize(Vector2d childSize) {
+	/** Adds the value of the padding and border size to the given size */
+	public Vector2d addExtraSize(Vector2d childSize) {
 		return childSize.add(padding.getWidth(), padding.getHeight()).add(borderSize.get()*2, borderSize.get()*2);
 	}
 	
-	public Vector2d getChildSize(Vector2d fullSize) {
+	public double getExtraWidth() {
+		return padding.getWidth() + borderSize.get()*2;
+	}
+	
+	public double getExtraHeight() {
+		return padding.getHeight() + borderSize.get()*2;
+	}
+	
+	/** Subtracts the value of the padding and border size from the given size */
+	public Vector2d subExtraSize(Vector2d fullSize) {
 		return fullSize.sub(padding.getWidth(), padding.getHeight()).sub(borderSize.get()*2, borderSize.get()*2);
 	}
 	

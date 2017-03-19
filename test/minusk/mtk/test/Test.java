@@ -6,7 +6,6 @@ import minusk.mtk.core.Stage;
 import minusk.mtk.scene.Node;
 import minusk.mtk.scene.layout.Bin;
 import minusk.mtk.style.BinStyle;
-import minusk.mtk.style.TextStyle;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
 import org.lwjgl.nanovg.NVGColor;
@@ -26,16 +25,19 @@ public class Test extends Application {
 		style.borderSize.set(10);
 		style.padding.set(20, 20, 20, 20);
 		Bin b =  new Bin(style);
-		TextStyle s = new TextStyle();
-		s.size.set(60);
 		b.setChild(new TestNode(Application.getPrimaryStage()));
-		Application.getPrimaryStage().setTitle("NanoVG apparently doesn't like drawing big text");
+		Application.getPrimaryStage().setTitle("Testaholic");
 		Application.getPrimaryStage().setChild(b);
 		Application.getPrimaryStage().backgroundColor.set(1, 1, 1, 1);
-		Application.setScalingFactor(1.5);
-		Stage popup = new PopupStage(40, 40);
+		Application.setScalingFactor(2);
+		BinStyle s = new BinStyle();
+		s.expandX.set(false);
+		s.expandY.set(false);
+		s.padding.set(10,10,10,10);
+		Bin pbin = new Bin(s);
+		PopupStage popup = new PopupStage(pbin, 40, 40);
 		popup.backgroundColor.set(1,1,1,1);
-		popup.setChild(new TestNode(popup));
+		pbin.setChild(new TestNode(popup));
 		popup.show();
 	}
 	
@@ -51,17 +53,11 @@ public class Test extends Application {
 		
 		@Override
 		public Vector2dc getMinimumSize() {
+			return new Vector2d(100, 100);
+		}
+		
+		public Vector2dc getMaximumSize() { 
 			return new Vector2d(200, 200);
-		}
-		
-		@Override
-		public boolean canExpandX() {
-			return false;
-		}
-		
-		@Override
-		public boolean canExpandY() {
-			return false;
 		}
 		
 		@Override
@@ -70,8 +66,8 @@ public class Test extends Application {
 			try (MemoryStack stack = MemoryStack.stackPush()) {
 				nvgFillColor(vg(), nvgRGBAf(1, 0, 1, 1, NVGColor.mallocStack()));
 			}
-			nvgCircle(vg(), 100, 100, 100);
-			nvgCircle(vg(), 100, 100, 50);
+			nvgCircle(vg(), (float) getSize().x()/2, (float) getSize().y()/2, (float) Math.min(getSize().x(), getSize().y())/2);
+			nvgCircle(vg(), (float) getSize().x()/2, (float) getSize().y()/2, 50);
 			nvgPathWinding(vg(), NVG_CW);
 			nvgFill(vg());
 		}

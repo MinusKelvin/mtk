@@ -24,10 +24,9 @@ public abstract class Stage {
 	
 	public final ColorProperty backgroundColor = new ColorProperty();
 	final StageBin root = new StageBin();
-	final Vector2i position = new Vector2i(), size = new Vector2i();
-	boolean shown = false;
+	private final Vector2i position = new Vector2i(), size = new Vector2i();
 	private final Vector2d lsize = new Vector2d();
-	int texture = -1;
+	private int texture = -1;
 	private int stencilTex = -1;
 	private boolean renderRequested = true, reflowRequested, needTextureResize = true;
 	
@@ -49,21 +48,16 @@ public abstract class Stage {
 	
 	void render() {
 		if (reflowRequested) {
-			Vector2dc ms = root.getMinimumSize();
-			lsize.set(Application.toLogical(size));
-			double w = lsize.x, h = lsize.y;
-			if (ms.x() > lsize.x)
-				w = Application.alignPhysical(ms.x());
-			if (ms.y() > lsize.y)
-				h = Application.alignPhysical(ms.y());
-			if (w != lsize.x || h != lsize.y)
-				resize(w, h);
 			onReflow();
+			root.resize(Application.toLogical(size));
+			if (!Application.toPhysical(root.getSize()).equals(size)) {
+				size.x = Application.toPhysical(root.getSize().x());
+				size.y = Application.toPhysical(root.getSize().y());
+				lsize.set(Application.toLogical(size));
+				needTextureResize = true;
+			}
 			reflowRequested = false;
 			renderRequested = true;
-			root.resize(Application.toLogical(size));
-			if (!root.getSize().equals(Application.toLogical(size)))
-				resize(root.getSize().x(), root.getSize().y());
 		}
 		if (renderRequested) {
 			if (needTextureResize) {
@@ -89,41 +83,67 @@ public abstract class Stage {
 			
 			nvgBeginFrame(vg(), (int) Application.toLogical(size.x), (int) Application.toLogical(size.y), (float) Application.getScalingFactor());
 			nvgResetTransform(vg());
-			drawContent();
+			root.render();
 			nvgEndFrame(vg());
 		}
 	}
 	
-	public void show() {
+	/**
+	 * Sets the size of this stage.
+	 * Will not ge made larger than its child's maximum size
+	 * nor smaller than its child's minimum size.
+	 */
+	public void resize(double width, double height) {
+		Vector2dc minsize = root.getMinimumSize();
+		if (width < minsize.x())
+			width = minsize.x();
+		if (height < minsize.y())
+			height = minsize.y();
+		Vector2dc maxsize = root.getMaximumSize();
+		if (width > maxsize.x() && maxsize.x() != -1)
+			width = maxsize.x();
+		if (height > maxsize.y() && maxsize.y() != -1)
+			height = maxsize.y();
+		lsize.set(width, height);
+		if (Application.toPhysical(width) == size.x && Application.toPhysical(height) == size.y)
+			return;
+		size.set(Application.toPhysical(width), Application.toPhysical(height));
+		root.requestReflow();
+		needTextureResize = true;
+	}
+	
+	/** Creates GL resources for this stage */
+	void show() {
+		if (texture != -1)
+			return;
 		texture = glGenTextures();
+		stencilTex = glGenTextures();
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		stencilTex = glGenTextures();
 		needTextureResize = true;
 		renderRequested = true;
 		root.requestReflow();
-		Application.addStage(this);
-		shown = true;
 	}
 	
-	public void close() {
-		if (!shown)
+	/** Releases GL resources held by this stage */
+	void close() {
+		if (texture == -1)
 			return;
-		shown = false;
 		glDeleteTextures(texture);
 		glDeleteTextures(stencilTex);
-		Application.removeStage(this);
+		texture = -1;
+		stencilTex = -1;
+	}
+	
+	boolean isPointInStage(Vector2dc pos) {
+		double x = Application.toLogical(position.x);
+		double y = Application.toLogical(position.y);
+		double w = Application.toLogical(size.x);
+		double h = Application.toLogical(size.y);
+		return pos.y() >= y && pos.y() < y + h && pos.x() >= x && pos.x() < x+w;
 	}
 	
 	void onReflow() {}
-	
-	void drawContent() {
-		root.render();
-	}
-	
-	boolean hasShadow() {
-		return true;
-	}
 	
 	public void setTitle(String title) {}
 	
@@ -135,28 +155,28 @@ public abstract class Stage {
 		return root.getChild();
 	}
 	
-	/** Resizes this stage to something at least as large as its child's minimum size. */
-	public void resize(double width, double height) {
-		Vector2dc msize = root.getMinimumSize();
-		if (msize.x() > width)
-			width = msize.x();
-		if (msize.y() > height)
-			height = msize.y();
-		lsize.set(Application.alignPhysical(width), Application.alignPhysical(height));
-		if (Application.toPhysical(width) == size.x && Application.toPhysical(height) == size.y)
-			return;
-		size.set(Application.toPhysical(width), Application.toPhysical(height));
-		needTextureResize = true;
-		reflowRequested = true;
-		renderRequested = true;
-	}
-	
 	public void setPosition(double x, double y) {
 		position.set(Application.toPhysical(x), Application.toPhysical(y));
 	}
 	
+	public Vector2ic getPhysicalPosition() {
+		return position;
+	}
+	
+	public Vector2dc getPosition() {
+		return Application.toLogical(position);
+	}
+	
 	public Vector2ic getPhysicalSize() {
 		return size;
+	}
+	
+	public Vector2dc getSize() {
+		return Application.toLogical(size);
+	}
+	
+	int getTexture() {
+		return texture;
 	}
 	
 	class StageBin extends Bin {

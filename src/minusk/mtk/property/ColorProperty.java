@@ -45,6 +45,8 @@ public class ColorProperty extends Property implements ReadOnlyColorProperty {
 	}
 	
 	public void set(float r, float g, float b, float a) {
+		if (r == color.x && g == color.y && b == color.z && a == color.w)
+			return;
 		color.set(r,g,b,a);
 		changeListeners.forEach(l -> l.onChange(r,g,b,a));
 		invalidate();

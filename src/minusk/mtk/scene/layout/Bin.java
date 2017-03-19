@@ -48,8 +48,8 @@ public class Bin extends Container {
 	@Override
 	protected void reflow() {
 		if (child != null) {
-			child.resize(style.getChildSize(new Vector2d(getSize())));
-			Vector2d dif = style.getChildSize(new Vector2d(getSize())).sub(child.getSize());
+			child.resize(style.subExtraSize(new Vector2d(getSize())));
+			Vector2d dif = style.subExtraSize(new Vector2d(getSize())).sub(child.getSize());
 			if (style.expandX.get()) {
 				switch (style.alignment.get()) {
 					case TOP_LEFT:case CENTER_LEFT:case BOTTOM_LEFT:
@@ -93,7 +93,22 @@ public class Bin extends Container {
 	public Vector2dc getMinimumSize() {
 		if (child == null)
 			return Application.ZERO;
-		return style.getMinimumSize(new Vector2d(child.getMinimumSize()));
+		return style.addExtraSize(new Vector2d(child.getMinimumSize()));
+	}
+	
+	@Override
+	public Vector2dc getMaximumSize() {
+		Vector2d s = new Vector2d(child != null ? child.getMaximumSize() : Application.ZERO);
+		if (style.expandX.get())
+			s.x = -1;
+		else if (s.x != -1)
+			s.x += style.getExtraWidth();
+		
+		if (style.expandY.get())
+			s.y = -1;
+		else if (s.y != -1)
+			s.y += style.getExtraHeight();
+		return s;
 	}
 	
 	public void setStyle(BinStyle style) {
@@ -105,16 +120,6 @@ public class Bin extends Container {
 	
 	public BinStyle getStyle() {
 		return style;
-	}
-	
-	@Override
-	public boolean canExpandX() {
-		return style.expandX.get() || (child != null && child.canExpandX());
-	}
-	
-	@Override
-	public boolean canExpandY() {
-		return style.expandY.get() || (child != null && child.canExpandY());
 	}
 	
 	@Override

@@ -5,8 +5,6 @@ import minusk.mtk.gl.ShaderProgram;
 import minusk.mtk.scene.Node;
 import org.joml.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.nanovg.NVGColor;
-import org.lwjgl.nanovg.NVGPaint;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
@@ -15,13 +13,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.Math;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.PriorityQueue;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.nanovg.NanoVG.*;
+import static org.lwjgl.nanovg.NanoVG.nvgCreateFontMem;
 import static org.lwjgl.nanovg.NanoVGGL3.NVG_ANTIALIAS;
 import static org.lwjgl.nanovg.NanoVGGL3.nvgCreate;
 import static org.lwjgl.opengl.GL11.*;
@@ -35,6 +30,7 @@ import static org.lwjgl.system.jemalloc.JEmalloc.*;
  */
 public abstract class Application {
 	public static final Vector2dc ZERO = new Vector2d(0,0);
+	public static final Vector2dc NEGONE = new Vector2d(-1,-1);
 	
 	private static Application app;
 	
@@ -43,7 +39,9 @@ public abstract class Application {
 	private static PriorityQueue<Timer> timers = new PriorityQueue<>();
 	
 	private static PrimaryStage primaryStage;
-	private static ArrayList<Stage> stages = new ArrayList<>();
+//	private static ArrayList<ToolStage> toolStages = new ArrayList<>();
+//	private static ArrayList<ModalStage> modalStages = new ArrayList<>();
+	private static ArrayList<PopupStage> popupStages = new ArrayList<>();
 	private static ShaderProgram copyShader;
 	private static Matrix4f pixelSpace = new Matrix4f();
 	private static int vao, vbo;
@@ -52,9 +50,9 @@ public abstract class Application {
 	private static double frameDelta, scalingFactor=1;
 	private static long nvgContext, window;
 	
-	private static Node mouseNode;
+	private static Node mouseNode, scrollNode;
 	private static boolean[] dragging = new boolean[3];
-	private static double currentX, currentY;
+	private static Vector2d mpos = new Vector2d();
 	
 	/** Starts the application */
 	public static void launch(Application app, String[] args) {
@@ -79,6 +77,7 @@ public abstract class Application {
 		window = glfwCreateWindow(w, h, "", 0, 0);
 		glfwMakeContextCurrent(window);
 		GL.createCapabilities();
+		glfwSwapInterval(0);
 		
 		try {
 			copyShader = new ShaderProgram(new InputStreamReader(Application.class.getResourceAsStream("/minusk/mtk/res/passthrough.vs.glsl")),
@@ -93,7 +92,6 @@ public abstract class Application {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		
 		primaryStage = new PrimaryStage(window, w, h);
-		stages.add(primaryStage);
 		nvgContext = nvgCreate(NVG_ANTIALIAS);
 		try {
 			InputStream file = Application.class.getResourceAsStream("/minusk/mtk/res/DejaVuSans.ttf");
@@ -136,7 +134,8 @@ public abstract class Application {
 	
 	static void render() {
 		drawStage(primaryStage);
-		stages.forEach(Application::drawStage);
+//		toolStages.forEach(Application::drawStage);
+		popupStages.forEach(Application::drawStage);
 		
 		glfwSwapBuffers(window);
 	}
@@ -145,37 +144,17 @@ public abstract class Application {
 		stage.render();
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0, 0, primaryStage.size.x, primaryStage.size.y);
+		glViewport(0, 0, primaryStage.getPhysicalSize().x(), primaryStage.getPhysicalSize().y());
 		
-		if (stage.hasShadow()) {
-			nvgBeginFrame(nvgContext, (int) Application.toLogical(primaryStage.size.x),
-					(int) Application.toLogical(primaryStage.size.y), (float) getScalingFactor());
-			nvgBeginPath(nvgContext);
-			nvgRect(nvgContext, (float) Application.toLogical(stage.position.x)-10, (float) Application.toLogical(stage.position.y)-10,
-					(float) Application.toLogical(stage.size.x)+20, (float) Application.toLogical(stage.size.y)+20);
-			nvgRect(nvgContext, (float) Application.toLogical(stage.position.x), (float) Application.toLogical(stage.position.y),
-					(float) Application.toLogical(stage.size.x), (float) Application.toLogical(stage.size.y));
-			nvgPathWinding(nvgContext, NVG_CW);
-			try (MemoryStack stack = MemoryStack.stackPush()) {
-				nvgFillPaint(nvgContext, nvgBoxGradient(nvgContext,
-						(float) Application.toLogical(stage.position.x)-5, (float) Application.toLogical(stage.position.y)-5,
-						(float) Application.toLogical(stage.size.x)+10, (float) Application.toLogical(stage.size.y)+10,
-						4, 10, nvgRGBAf(0,0,0,0.25f, NVGColor.mallocStack()),
-						nvgRGBAf(0,0,0,0, NVGColor.mallocStack()), NVGPaint.mallocStack()));
-			}
-			nvgFill(nvgContext);
-			nvgEndFrame(nvgContext);
-		}
-		
-		pixelSpace.setOrtho2D(0, primaryStage.size.x, primaryStage.size.y, 0);
+		pixelSpace.setOrtho2D(0, primaryStage.getPhysicalSize().x(), primaryStage.getPhysicalSize().y(), 0);
 		glBindVertexArray(vao);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, new float[] {
-				stage.position.x, stage.position.y,
-				stage.position.x+stage.size.x,stage.position.y,
-				stage.position.x,stage.position.y+stage.size.y,
-				stage.position.x+stage.size.x,stage.position.y+stage.size.y
+				stage.getPhysicalPosition().x(), stage.getPhysicalPosition().y(),
+				stage.getPhysicalPosition().x()+stage.getPhysicalSize().x(),stage.getPhysicalPosition().y(),
+				stage.getPhysicalPosition().x(),stage.getPhysicalPosition().y()+stage.getPhysicalSize().y(),
+				stage.getPhysicalPosition().x()+stage.getPhysicalSize().x(),stage.getPhysicalPosition().y()+stage.getPhysicalSize().y()
 		}, GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
 		glEnableVertexAttribArray(0);
@@ -183,7 +162,7 @@ public abstract class Application {
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		
-		glBindTexture(GL_TEXTURE_2D, stage.texture);
+		glBindTexture(GL_TEXTURE_2D, stage.getTexture());
 		copyShader.bind();
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			glUniformMatrix4fv(glGetUniformLocation(copyShader.id, "proj"), false, pixelSpace.get(stack.mallocFloat(16)));
@@ -222,19 +201,55 @@ public abstract class Application {
 			toAdd.add(animation);
 	}
 	
+	static void mousePosition(double x, double y) {
+		Node mNode = null;
+		Node sNode = null;
+		mpos.set(x,y);
+		if (!popupStages.isEmpty()) {
+			for (PopupStage stage : popupStages) {
+				if (stage.isPointInStage(mpos)) {
+					List<Node> nodes = stage.root.findNodesByPoint(mpos.sub(stage.getPosition()));
+					for (Node n : nodes) {
+						if (n.shouldReceiveMouseEvents())
+							mNode = n;
+						if (n.shouldReceiveScrollEvents())
+							sNode = n;
+					}
+					if (mNode != mouseNode && mouseNode != null)
+						mouseNode.mouseExit();
+					mouseNode = mNode;
+					scrollNode = sNode;
+					if (mouseNode != null)
+						mouseNode.mouseMove(mpos.set(x,y).sub(mouseNode.getScreenPosition()));
+					mpos.set(x,y);
+					return;
+				}
+			}
+			// TODO menu group event
+			if (mouseNode != null)
+				mouseNode.mouseExit();
+			mouseNode = null;
+//		} else if (!modalStages.isEmpty()) { // TODO modal stages
+//		} else { // TODO tool stages + primary stage
+		}
+	}
+	
+	static void addStage(PopupStage stage) {
+		popupStages.add(stage);
+	}
+	
+	static void removeStage(PopupStage stage) {
+		popupStages.remove(stage);
+	}
+	
+	static void windowReflow() {
+		for (Stage stage : popupStages)
+			stage.root.requestReflow();
+	}
+	
 	private static void glfwError(int errorcode, long description) {
 		throw new RuntimeException(String.format(Locale.US, "GLFW Error Code %X: %s",
 				errorcode, GLFWErrorCallback.getDescription(description)));
-	}
-	
-	static void addStage(Stage stage) {
-		if (stage != primaryStage)
-			stages.add(stage);
-	}
-	
-	static void removeStage(Stage stage) {
-		stages.remove(stage);
-//		mousePosition(currentX, currentY);
 	}
 	
 	public static Application getApp() {
@@ -258,8 +273,7 @@ public abstract class Application {
 	/** Sets the scaling factor */
 	public static void setScalingFactor(double s) {
 		scalingFactor = s;
-		for (Stage stage : stages)
-			stage.root.requestReflow();
+		windowReflow();
 	}
 	
 	/** Gets the scaling factor of the application. */

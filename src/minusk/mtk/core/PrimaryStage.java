@@ -1,5 +1,6 @@
 package minusk.mtk.core;
 
+import org.joml.Vector2dc;
 import org.joml.Vector2ic;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -17,20 +18,11 @@ final class PrimaryStage extends Stage {
 		glfwSetWindowCloseCallback(window, this::close);
 		glfwSetFramebufferSizeCallback(window, this::fboSize);
 		glfwSetWindowRefreshCallback(window, this::winRefresh);
-		
-		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
-		if (!root.canExpandX())
-			x = msize.x();
-		if (!root.canExpandY())
-			y = msize.y();
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
+		glfwSetCursorPosCallback(window, this::cursorPos);
 	}
 	
 	@Override
 	public void show() {
-		if (shown)
-			return;
 		super.show();
 		glfwShowWindow(window);
 	}
@@ -38,25 +30,16 @@ final class PrimaryStage extends Stage {
 	@Override
 	public void resize(double width, double height) {
 		super.resize(width, height);
-		glfwSetWindowSize(window, size.x, size.y);
-		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
-		if (!root.canExpandX())
-			x = msize.x();
-		if (!root.canExpandY())
-			y = msize.y();
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
+		glfwSetWindowSize(window, getPhysicalSize().x(), getPhysicalSize().y());
 	}
 	
 	@Override
 	protected void onReflow() {
-		Vector2ic msize = Application.toPhysical(root.getMinimumSize());
-		int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
-		if (!root.canExpandX())
-			x = msize.x();
-		if (!root.canExpandY())
-			y = msize.y();
-		glfwSetWindowSizeLimits(window, msize.x(), msize.y(), x, y);
+		Vector2ic minsize = Application.toPhysical(root.getMinimumSize());
+		Vector2dc maxsize = root.getMaximumSize();
+		glfwSetWindowSizeLimits(window, minsize.x(), minsize.y(),
+				maxsize.x() == -1 ? -1 : Application.toPhysical(maxsize.x()),
+				maxsize.y() == -1 ? -1 : Application.toPhysical(maxsize.y()));
 	}
 	
 	@Override
@@ -74,20 +57,20 @@ final class PrimaryStage extends Stage {
 		glfwSetWindowTitle(window, title);
 	}
 	
-	@Override
-	boolean hasShadow() {
-		return false;
-	}
-	
 	private void close(long window) {
 		Application.getApp().close();
 	}
 	
 	private void fboSize(long window, int w, int h) {
 		super.resize(Application.toLogical(w), Application.toLogical(h));
+		Application.windowReflow();
 	}
 	
 	private void winRefresh(long window) {
 		Application.render();
+	}
+	
+	private void cursorPos(long window, double x, double y) {
+		Application.mousePosition(Application.toLogical((int) x), Application.toLogical((int) y));
 	}
 }

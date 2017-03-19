@@ -33,6 +33,8 @@ public class ObjectProperty<T> extends Property implements ReadOnlyObjectPropert
 	}
 	
 	public void set(T value) {
+		if (value == this.value)
+			return;
 		if (!allowNull && value == null)
 			throw new NullPointerException("value cannot be null");
 		this.value = value;

@@ -29,6 +29,8 @@ public class BooleanProperty extends Property implements ReadOnlyBooleanProperty
 	}
 	
 	public void set(boolean value) {
+		if (value == this.value)
+			return;
 		this.value = value;
 		changeListeners.forEach(l -> l.onChange(value));
 		invalidate();

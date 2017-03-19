@@ -41,6 +41,8 @@ public class PaddingProperty extends Property implements ReadOnlyPaddingProperty
 	}
 	
 	public void set(double left, double right, double top, double bottom) {
+		if (left == padding.x && right == padding.y && top == padding.z && bottom == padding.w)
+			return;
 		padding.set(left, right, top, bottom);
 		changeListeners.forEach(l -> l.onChange(left, right, top, bottom));
 		invalidate();

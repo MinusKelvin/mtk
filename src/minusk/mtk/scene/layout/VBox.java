@@ -29,19 +29,8 @@ public class VBox extends Container {
 	}
 	
 	@Override
-	public boolean canExpandX() {
-		for (Node n : children)
-			if (n.canExpandX())
-				return true;
-		return false;
-	}
-	
-	@Override
-	public boolean canExpandY() {
-		for (Node n : children)
-			if (n.canExpandY())
-				return true;
-		return false;
+	public Vector2dc getMaximumSize() {
+		return null;
 	}
 	
 	@Override

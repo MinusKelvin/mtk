@@ -34,18 +34,23 @@ public abstract class Node {
 	 * If the new size of this node is not equal to the current size of this node,
 	 * or if the dirty flag on this node is set, <code>reflow()</code> will be called.
 	 * This node will not be made smaller than its minimum size.
-	 * This node will not be made larger than its minimum size unless it can expand.
+	 * This node will not be made larger than its maximum size, if set.
 	 * */
 	public void resize(Vector2dc size) {
-		Vector2dc msize = getMinimumSize();
+		Vector2dc minsize = getMinimumSize();
+		Vector2dc maxsize = getMaximumSize();
 		double newWidth, newHeight;
-		if (size.x() < msize.x() || !canExpandX())
-			newWidth = msize.x();
+		if (size.x() < minsize.x())
+			newWidth = minsize.x();
+		else if (size.x() > maxsize.x() && maxsize.x() != -1)
+			newWidth = maxsize.x();
 		else
 			newWidth = size.x();
 		
-		if (size.y() < msize.y() || !canExpandY())
-			newHeight = msize.y();
+		if (size.y() < minsize.y())
+			newHeight = minsize.y();
+		else if (size.y() > maxsize.y() && maxsize.y() != -1)
+			newHeight = maxsize.y();
 		else
 			newHeight = size.y();
 		
@@ -57,15 +62,15 @@ public abstract class Node {
 	}
 	
 	/**
-	 * Called after this node was resized and its size changed or the dirty flag was set.
+	 * Called when is node needs to reflow its children.
 	 * Default implementation does nothing.
 	 */
 	protected void reflow() {}
 	
 	/** Tests if a point in this nodes's parent's coordinate space is inside this node. */
 	public boolean isPointInNode(Vector2dc p) {
-		return p.x() >= position.x && p.x() < position.x + size.x &&
-				p.y() >= position.y && p.y() < position.y + size.y;
+		return p.x() >= position.x && p.x() <= position.x + size.x &&
+				p.y() >= position.y && p.y() <= position.y + size.y;
 	}
 	
 	/**
@@ -86,10 +91,8 @@ public abstract class Node {
 	
 	/** Gets the minimum size of this node. */
 	public abstract Vector2dc getMinimumSize();
-	/** Returns true if this node can be expanded horizontally. */
-	public abstract boolean canExpandX();
-	/** Returns true if this node can be expanded vertically. */
-	public abstract boolean canExpandY();
+	/** Gets the maximum size of this node, or -1 if there is no limit. */
+	public abstract Vector2dc getMaximumSize();
 	
 	/**
 	 * Returns true if this node should receive mouse events.
@@ -168,7 +171,7 @@ public abstract class Node {
 	
 	public Vector2d getScreenPosition() {
 		if (parent == null)
-			return new Vector2d();
+			return new Vector2d(getPosition());
 		return parent.getScreenPosition().add(getPosition());
 	}
 	

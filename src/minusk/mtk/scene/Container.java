@@ -62,8 +62,8 @@ public abstract class Container extends Node {
 	void findNodesByPoint(Vector2d p, ArrayList<Node> nodes) {
 		super.findNodesByPoint(p, nodes);
 		for (Node node : getChildren()) {
-			node.findNodesByPoint(p.add(node.getPosition()), nodes);
-			p.sub(node.getPosition());
+			node.findNodesByPoint(p.sub(node.getPosition()), nodes);
+			p.add(node.getPosition());
 		}
 	}
 	

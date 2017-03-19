@@ -29,6 +29,8 @@ public class FloatProperty extends Property implements ReadOnlyFloatProperty {
 	}
 	
 	public void set(float value) {
+		if (value == this.value)
+			return;
 		this.value = value;
 		changeListeners.forEach(l -> l.onChange(value));
 		invalidate();

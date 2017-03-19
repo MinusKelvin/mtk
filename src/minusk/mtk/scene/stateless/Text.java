@@ -54,14 +54,8 @@ public class Text extends Node {
 		return msize;
 	}
 	
-	@Override
-	public boolean canExpandX() {
-		return false;
-	}
-	
-	@Override
-	public boolean canExpandY() {
-		return false;
+	public Vector2dc getMaximumSize() {
+		return msize;
 	}
 	
 	@Override
