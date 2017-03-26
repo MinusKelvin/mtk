@@ -3,7 +3,6 @@ package minusk.mtk.core;
 import minusk.mtk.animation.Animation;
 import minusk.mtk.gl.ShaderProgram;
 import minusk.mtk.scene.Node;
-import minusk.mtk.scene.layout.Bin;
 import minusk.mtk.scene.stateless.Text;
 import minusk.mtk.style.BinStyle;
 import minusk.mtk.style.TextStyle;
@@ -120,7 +119,8 @@ public abstract class Application {
 		
 		primaryStage = new PrimaryStage(window, w, h);
 		tooltipText = new Text(300, TOOLTIP_TEXT_STYLE);
-		tooltipStage = new PopupStage(new Bin(tooltipText, TOOLTIP_BIN_STYLE), 0,0, true);
+		tooltipStage = new PopupStage(tooltipText, 0,0, true);
+		tooltipStage.root.setStyle(TOOLTIP_BIN_STYLE);
 		app.start();
 		
 		primaryStage.show();
@@ -264,9 +264,9 @@ public abstract class Application {
 			tooltipStage.close();
 		}
 		if (!tooltipStage.isShown() && tooltipNode != null) {
-			tooltipStage.setPreferredPosition(x+10, y+10);
 			tooltipText.text.set(tooltipNode.tooltip.get());
 			tooltipTimer = startTimer(0.5, () -> {
+				tooltipStage.setPreferredPosition(x+10, y+10);
 				tooltipStage.show();
 			});
 		}
@@ -356,5 +356,9 @@ public abstract class Application {
 	
 	static {
 		TOOLTIP_BIN_STYLE.padding.set(2,2,2,2);
+		TOOLTIP_BIN_STYLE.expandX.set(false);
+		TOOLTIP_BIN_STYLE.expandY.set(false);
+		TOOLTIP_BIN_STYLE.borderSize.set(1);
+		TOOLTIP_BIN_STYLE.borderColor.set(0.5f,0.5f,0.5f,1);
 	}
 }
