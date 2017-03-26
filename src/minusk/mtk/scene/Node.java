@@ -1,6 +1,7 @@
 package minusk.mtk.scene;
 
 import minusk.mtk.property.IProperty;
+import minusk.mtk.property.ObjectProperty;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
 
@@ -13,6 +14,7 @@ public abstract class Node {
 	public final IProperty.InvalidateListener requestReflowListener = this::requestReflow;
 	public final IProperty.InvalidateListener requestRenderListener = this::requestRender;
 	
+	public final ObjectProperty<String> tooltip = new ObjectProperty<>();
 	private final Vector2d position = new Vector2d(), size = new Vector2d();
 	Container parent;
 	private boolean dirty = true;

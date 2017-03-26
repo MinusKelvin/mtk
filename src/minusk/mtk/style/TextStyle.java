@@ -30,8 +30,8 @@ public class TextStyle extends Style<Text> {
 		blur.addListener(this::requestReflowCB);
 	}
 	
-	/** Gets the minimum size of a piece of text. */
-	public Vector2dc getMinimumSize(String text) {
+	/** Gets the size of a piece of text. */
+	public Vector2dc getSize(String text, double width) {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			FloatBuffer buf = stack.mallocFloat(4);
 			nvgBeginFrame(vg(), 800, 600, (float) Application.getScalingFactor());
@@ -39,22 +39,39 @@ public class TextStyle extends Style<Text> {
 			nvgFontFace(vg(), "sans");
 			nvgFontSize(vg(), size.get());
 			nvgFontBlur(vg(), blur.get());
-			nvgTextBounds(vg(), 0, 0, text, buf);
+			if (width > 0)
+				nvgTextBoxBounds(vg(), 0, 0, (float) width, text, buf);
+			else
+				nvgTextBounds(vg(), 0, 0, text, buf);
 			nvgCancelFrame(vg());
-			return new Vector2d(buf.get(2)-buf.get(0), size.get());
+			return new Vector2d(buf.get(2)-buf.get(0), buf.get(3)-buf.get(1));
 		}
 	}
 	
 	/** Renders the given text string at the origin. */
-	public void render(String text) {
+	public void render(String text, double width) {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			FloatBuffer buf = stack.mallocFloat(4);
 			nvgFontFace(vg(), "sans");
 			nvgFontSize(vg(), size.get());
 			nvgFontBlur(vg(), blur.get());
-			nvgTextBounds(vg(), 0, 0, text, buf);
 			nvgFillColor(vg(), color.get(NVGColor.mallocStack()));
-			nvgText(vg(), -buf.get(0), -buf.get(1), text);
+			nvgSave(vg());
+			FloatBuffer xform = stack.mallocFloat(6);
+			nvgCurrentTransform(vg(), xform);
+			nvgResetTransform(vg());
+			if (width > 0) {
+				nvgTextBoxBounds(vg(), 0, 0, (float) width, text, buf);
+				FloatBuffer x = stack.mallocFloat(1), y = stack.mallocFloat(1);
+				nvgTransformPoint(x, y, xform, -buf.get(0), -buf.get(1));
+				nvgTextBox(vg(), (float) Application.alignPhysical(x.get(0)), (float) Application.alignPhysical(y.get(0)), (float) width, text);
+			} else {
+				nvgTextBounds(vg(), 0, 0, text, buf);
+				FloatBuffer x = stack.mallocFloat(1), y = stack.mallocFloat(1);
+				nvgTransformPoint(x, y, xform, -buf.get(0), -buf.get(1));
+				nvgText(vg(), (float) Application.alignPhysical(x.get(0)), (float) Application.alignPhysical(y.get(0)), text);
+			}
+			nvgRestore(vg());
 		}
 	}
 	

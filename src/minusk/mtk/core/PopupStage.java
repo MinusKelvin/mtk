@@ -9,10 +9,16 @@ import org.joml.Vector2dc;
  * @author MinusKelvin
  */
 public class PopupStage extends Stage {
-	public PopupStage(Node node, double x, double y) {
+	private double prefX, prefY;
+	private final boolean add;
+	
+	PopupStage(Node node, double x, double y, boolean skipAdd) {
 		super(node);
+		add = !skipAdd;
 		root.setStyle(STYLE);
 		setPosition(x, y);
+		prefX = x;
+		prefY = y;
 		Vector2dc s = node.getMaximumSize();
 		Vector2dc m = node.getMinimumSize();
 		resize(s.x() == -1 ? m.x() + root.getStyle().getExtraWidth() : s.x() + root.getStyle().getExtraWidth(),
@@ -33,7 +39,7 @@ public class PopupStage extends Stage {
 	void onReflow() {
 		Vector2dc msize = Application.getPrimaryStage().getSize();
 		Vector2dc size = root.getMaximumSize();
-		Vector2d p = new Vector2d(getPosition());
+		Vector2d p = new Vector2d(prefX, prefY);
 		if (p.x < 0)
 			p.x = 0;
 		if (p.y < 0)
@@ -49,12 +55,19 @@ public class PopupStage extends Stage {
 			setPosition(p.x, p.y);
 	}
 	
+	public void setPreferredPosition(double x, double y) {
+		prefX = x;
+		prefY = y;
+		onReflow();
+	}
+	
 	@Override
 	public void show() {
 		if (getTexture() != -1)
 			return;
 		super.show();
-		Application.addStage(this);
+		if (add)
+			Application.addStage(this);
 	}
 	
 	@Override
@@ -62,7 +75,8 @@ public class PopupStage extends Stage {
 		if (getTexture() == -1)
 			return;
 		super.close();
-		Application.removeStage(this);
+		if (add)
+			Application.removeStage(this);
 	}
 	
 	@Override

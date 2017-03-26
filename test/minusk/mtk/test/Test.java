@@ -1,10 +1,10 @@
 package minusk.mtk.test;
 
 import minusk.mtk.core.Application;
-import minusk.mtk.core.PopupStage;
 import minusk.mtk.core.Stage;
 import minusk.mtk.scene.Node;
 import minusk.mtk.scene.layout.Bin;
+import minusk.mtk.scene.stateless.Text;
 import minusk.mtk.style.BinStyle;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
@@ -25,20 +25,17 @@ public class Test extends Application {
 		style.borderSize.set(10);
 		style.padding.set(20, 20, 20, 20);
 		Bin b =  new Bin(style);
-		b.setChild(new TestNode(Application.getPrimaryStage()));
+		BinStyle o = new BinStyle();
+		o.backgroundColor.set(1, 1, 0.5f, 1);
+		o.expandX.set(false);
+		o.expandY.set(false);
+		Text t = new Text("Hello World!\nI am a multi-line text string!", 150);
+		t.tooltip.set("I also have a tooltip! It can be as long as it needs to be because it can be multi-line!");
+		b.setChild(new Bin(t, o));
 		Application.getPrimaryStage().setTitle("Testaholic");
 		Application.getPrimaryStage().setChild(b);
 		Application.getPrimaryStage().backgroundColor.set(1, 1, 1, 1);
-		Application.setScalingFactor(2);
-		BinStyle s = new BinStyle();
-		s.expandX.set(false);
-		s.expandY.set(false);
-		s.padding.set(10,10,10,10);
-		Bin pbin = new Bin(s);
-		PopupStage popup = new PopupStage(pbin, 40, 40);
-		popup.backgroundColor.set(1,1,1,1);
-		pbin.setChild(new TestNode(popup));
-		popup.show();
+		Application.setScalingFactor(1);
 	}
 	
 	public static void main(String[] args) {

@@ -22,7 +22,7 @@ import static org.lwjgl.opengl.GL32.glFramebufferTexture;
 public abstract class Stage {
 	static int fbo;
 	
-	public final ColorProperty backgroundColor = new ColorProperty();
+	public final ColorProperty backgroundColor = new ColorProperty(1,1,1,1);
 	final StageBin root = new StageBin();
 	private final Vector2i position = new Vector2i(), size = new Vector2i();
 	private final Vector2d lsize = new Vector2d();
@@ -114,7 +114,7 @@ public abstract class Stage {
 	
 	/** Creates GL resources for this stage */
 	void show() {
-		if (texture != -1)
+		if (isShown())
 			return;
 		texture = glGenTextures();
 		stencilTex = glGenTextures();
@@ -127,7 +127,7 @@ public abstract class Stage {
 	
 	/** Releases GL resources held by this stage */
 	void close() {
-		if (texture == -1)
+		if (!isShown())
 			return;
 		glDeleteTextures(texture);
 		glDeleteTextures(stencilTex);
@@ -173,6 +173,10 @@ public abstract class Stage {
 	
 	public Vector2dc getSize() {
 		return Application.toLogical(size);
+	}
+	
+	public boolean isShown() {
+		return texture != -1;
 	}
 	
 	int getTexture() {

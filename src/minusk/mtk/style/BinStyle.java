@@ -41,6 +41,14 @@ public class BinStyle extends Style<Bin> {
 	
 	/** Renders the background and border of a Bin at the origin given its size. */
 	public void render(Vector2dc size) {
+		if (backgroundColor.getA() != 0) {
+			nvgBeginPath(vg());
+			try (MemoryStack stack = MemoryStack.stackPush()) {
+				nvgFillColor(vg(), backgroundColor.get(NVGColor.mallocStack()));
+			}
+			nvgRect(vg(), 0, 0, (float) size.x(), (float) size.y());
+			nvgFill(vg());
+		}
 		if (borderSize.get() != 0 && borderColor.getA() != 0) {
 			nvgBeginPath(vg());
 			nvgRect(vg(), borderSize.get()/2, borderSize.get()/2,
@@ -51,9 +59,6 @@ public class BinStyle extends Style<Bin> {
 			}
 			nvgStrokeWidth(vg(), borderSize.get());
 			nvgStroke(vg());
-		}
-		if (backgroundColor.getA() != 0) {
-			
 		}
 	}
 	

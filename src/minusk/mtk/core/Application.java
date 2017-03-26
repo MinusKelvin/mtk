@@ -3,6 +3,10 @@ package minusk.mtk.core;
 import minusk.mtk.animation.Animation;
 import minusk.mtk.gl.ShaderProgram;
 import minusk.mtk.scene.Node;
+import minusk.mtk.scene.layout.Bin;
+import minusk.mtk.scene.stateless.Text;
+import minusk.mtk.style.BinStyle;
+import minusk.mtk.style.TextStyle;
 import org.joml.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
@@ -39,9 +43,10 @@ public abstract class Application {
 	private static PriorityQueue<Timer> timers = new PriorityQueue<>();
 	
 	private static PrimaryStage primaryStage;
+	private static PopupStage tooltipStage;
 //	private static ArrayList<ToolStage> toolStages = new ArrayList<>();
 //	private static ArrayList<ModalStage> modalStages = new ArrayList<>();
-	private static ArrayList<PopupStage> popupStages = new ArrayList<>();
+	private static ArrayList<PopupStage> menuStages = new ArrayList<>();
 	private static ShaderProgram copyShader;
 	private static Matrix4f pixelSpace = new Matrix4f();
 	private static int vao, vbo;
@@ -50,7 +55,9 @@ public abstract class Application {
 	private static double frameDelta, scalingFactor=1;
 	private static long nvgContext, window;
 	
-	private static Node mouseNode, scrollNode;
+	private static Timer tooltipTimer;
+	private static Text tooltipText;
+	private static Node mouseNode, scrollNode, tooltipNode;
 	private static boolean[] dragging = new boolean[3];
 	private static Vector2d mpos = new Vector2d();
 	
@@ -91,7 +98,6 @@ public abstract class Application {
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		
-		primaryStage = new PrimaryStage(window, w, h);
 		nvgContext = nvgCreate(NVG_ANTIALIAS);
 		try {
 			InputStream file = Application.class.getResourceAsStream("/minusk/mtk/res/DejaVuSans.ttf");
@@ -111,6 +117,10 @@ public abstract class Application {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+		
+		primaryStage = new PrimaryStage(window, w, h);
+		tooltipText = new Text(300, TOOLTIP_TEXT_STYLE);
+		tooltipStage = new PopupStage(new Bin(tooltipText, TOOLTIP_BIN_STYLE), 0,0, true);
 		app.start();
 		
 		primaryStage.show();
@@ -128,14 +138,25 @@ public abstract class Application {
 			while (!timers.isEmpty() && timers.peek().time <= glfwGetTime())
 				timers.poll().toRun.run();
 			render();
-			glfwPollEvents();
+			if (!animations.isEmpty())
+				glfwWaitEventsTimeout(0.01);
+			else if (!timers.isEmpty()) {
+				double timeout = timers.peek().time-glfwGetTime();
+				if (timeout <= 0)
+					glfwPollEvents();
+				else
+					glfwWaitEventsTimeout(timeout);
+			} else
+				glfwWaitEvents();
 		}
 	}
 	
 	static void render() {
 		drawStage(primaryStage);
 //		toolStages.forEach(Application::drawStage);
-		popupStages.forEach(Application::drawStage);
+		menuStages.forEach(Application::drawStage);
+		if (tooltipStage.isShown())
+			drawStage(tooltipStage);
 		
 		glfwSwapBuffers(window);
 	}
@@ -181,11 +202,16 @@ public abstract class Application {
 	 * Calls the supplied <code>Runnable</code> after seconds have passed.
 	 * This is not an accurate timer, and the callback will only be called during a cycle of the event loop.
 	 */
-	public static void startTimer(double when, Runnable callback) {
+	public static Timer startTimer(double when, Runnable callback) {
 		Timer t = new Timer();
 		t.time = glfwGetTime()+when;
 		t.toRun = callback;
 		timers.add(t);
+		return t;
+	}
+	
+	public static void stopTimer(Timer t) {
+		timers.remove(t);
 	}
 	
 	/** Called when the user tries to close the application */
@@ -201,49 +227,61 @@ public abstract class Application {
 			toAdd.add(animation);
 	}
 	
+	private static void pickNodes(Vector2dc pos) {
+		mouseNode = null;
+		scrollNode = null;
+		tooltipNode = null;
+		if (tooltipStage.isShown() && tooltipStage.isPointInStage(pos))
+			tooltipStage.close();
+		pickFrom(pos, primaryStage);
+	}
+	
+	private static void pickFrom(Vector2dc pos, Stage stage) {
+		List<Node> nodes = stage.root.findNodesByPoint(new Vector2d(pos).sub(stage.getPosition()));
+		for (Node node : nodes) {
+			if (node.shouldReceiveMouseEvents())
+				mouseNode = node;
+			if (node.shouldReceiveScrollEvents())
+				scrollNode = node;
+			if (node.tooltip.get() != null)
+				tooltipNode = node;
+		}
+	}
+	
 	static void mousePosition(double x, double y) {
-		Node mNode = null;
-		Node sNode = null;
+		if (tooltipTimer != null)
+			stopTimer(tooltipTimer);
+		Node mnode = mouseNode;
+		Node tnode = tooltipNode;
+		mpos.set(x, y);
+		pickNodes(mpos);
+		if (mnode != mouseNode && mnode != null)
+			mnode.mouseExit();
+		if (mouseNode != null)
+			mouseNode.mouseMove(mpos.sub(mouseNode.getScreenPosition()));
 		mpos.set(x,y);
-		if (!popupStages.isEmpty()) {
-			for (PopupStage stage : popupStages) {
-				if (stage.isPointInStage(mpos)) {
-					List<Node> nodes = stage.root.findNodesByPoint(mpos.sub(stage.getPosition()));
-					for (Node n : nodes) {
-						if (n.shouldReceiveMouseEvents())
-							mNode = n;
-						if (n.shouldReceiveScrollEvents())
-							sNode = n;
-					}
-					if (mNode != mouseNode && mouseNode != null)
-						mouseNode.mouseExit();
-					mouseNode = mNode;
-					scrollNode = sNode;
-					if (mouseNode != null)
-						mouseNode.mouseMove(mpos.set(x,y).sub(mouseNode.getScreenPosition()));
-					mpos.set(x,y);
-					return;
-				}
-			}
-			// TODO menu group event
-			if (mouseNode != null)
-				mouseNode.mouseExit();
-			mouseNode = null;
-//		} else if (!modalStages.isEmpty()) { // TODO modal stages
-//		} else { // TODO tool stages + primary stage
+		if (tnode != tooltipNode) {
+			tooltipStage.close();
+		}
+		if (!tooltipStage.isShown() && tooltipNode != null) {
+			tooltipStage.setPreferredPosition(x+10, y+10);
+			tooltipText.text.set(tooltipNode.tooltip.get());
+			tooltipTimer = startTimer(0.5, () -> {
+				tooltipStage.show();
+			});
 		}
 	}
 	
 	static void addStage(PopupStage stage) {
-		popupStages.add(stage);
+		menuStages.add(stage);
 	}
 	
 	static void removeStage(PopupStage stage) {
-		popupStages.remove(stage);
+		menuStages.remove(stage);
 	}
 	
 	static void windowReflow() {
-		for (Stage stage : popupStages)
+		for (Stage stage : menuStages)
 			stage.root.requestReflow();
 	}
 	
@@ -306,8 +344,17 @@ public abstract class Application {
 		return toLogical(toPhysical(logical));
 	}
 	
-	private static class Timer {
-		double time;
-		Runnable toRun;
+	public static class Timer {
+		private double time;
+		private Runnable toRun;
+	}
+	
+	/** Style used by tooltip text */
+	public static final TextStyle TOOLTIP_TEXT_STYLE = new TextStyle();
+	/** Style used by the tooltip bin */
+	public static final BinStyle TOOLTIP_BIN_STYLE = new BinStyle();
+	
+	static {
+		TOOLTIP_BIN_STYLE.padding.set(2,2,2,2);
 	}
 }

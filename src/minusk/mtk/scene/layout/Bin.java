@@ -35,6 +35,8 @@ public class Bin extends Container {
 	public Bin(Node node, BinStyle style) {
 		this.style = style;
 		style.apply(this);
+		if (node != null)
+			setChild(node);
 	}
 	
 	public void setChild(Node node) {
