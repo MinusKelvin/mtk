@@ -4,8 +4,11 @@ import minusk.mtk.core.Application;
 import minusk.mtk.core.Stage;
 import minusk.mtk.scene.Node;
 import minusk.mtk.scene.layout.Bin;
+import minusk.mtk.scene.layout.HBox;
+import minusk.mtk.scene.layout.Position;
 import minusk.mtk.scene.stateless.Text;
 import minusk.mtk.style.BinStyle;
+import minusk.mtk.style.BoxStyle;
 import org.joml.Vector2d;
 import org.joml.Vector2dc;
 import org.lwjgl.nanovg.NVGColor;
@@ -29,13 +32,18 @@ public class Test extends Application {
 		o.backgroundColor.set(1, 1, 0.5f, 1);
 		o.expandX.set(false);
 		o.expandY.set(false);
-		Text t = new Text("Hello World!\nI am a multi-line text string!", 150);
-		t.tooltip.set("I also have a tooltip! It can be as long as it needs to be because it can be multi-line!");
-		b.setChild(new Bin(t, o));
-		Application.getPrimaryStage().setTitle("Testaholic");
-		Application.getPrimaryStage().setChild(b);
-		Application.getPrimaryStage().backgroundColor.set(1, 1, 1, 1);
-		Application.setScalingFactor(1);
+		o.padding.set(5,5,5,5);
+		Text t1 = new Text("Hello World!");
+		t1.tooltip.set("Text thing 1");
+		Text t2 = new Text("Two men walked into a bar");
+		t2.tooltip.set("Text thing 2");
+		b.setChild(new Bin(new HBox(t1, new TestNode(getPrimaryStage()), t2), o));
+		BoxStyle.HBOX_DEFAULT.gap.set(5);
+		BoxStyle.HBOX_DEFAULT.alignment.set(Position.CENTER_LEFT);
+		getPrimaryStage().setTitle("Testaholic");
+		getPrimaryStage().setChild(b);
+		getPrimaryStage().backgroundColor.set(1, 1, 1, 1);
+		setScalingFactor(1.5);
 	}
 	
 	public static void main(String[] args) {

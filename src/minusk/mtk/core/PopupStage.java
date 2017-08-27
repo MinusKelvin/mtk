@@ -48,7 +48,6 @@ public class PopupStage extends Stage {
 			p.x = msize.x() - size.x();
 		if (p.y + size.y() > msize.y())
 			p.y = msize.y() - size.y();
-		System.out.println("pos calced: "+p.x+", "+p.y);
 		if (p.x < 0 || p.y < 0 || size.x() > getSize().x() || size.y() > getSize().y()) {
 			resize(p.x < 0 ? msize.x() : size.x(), p.y < 0 ? msize.y() : size.y());
 			setPosition(p.x < 0 ? 0 : p.x, p.y < 0 ? 0 : p.y);

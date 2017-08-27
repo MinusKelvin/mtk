@@ -8,6 +8,7 @@ import org.joml.Vector2d;
 import org.joml.Vector2dc;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -17,6 +18,7 @@ import java.util.List;
  */
 public class Bin extends Container {
 	private final ArrayList<Node> list = new ArrayList<>(1);
+	private final List<Node> roView = Collections.unmodifiableList(list);
 	private Node child;
 	private BinStyle style;
 	
@@ -37,14 +39,6 @@ public class Bin extends Container {
 		style.apply(this);
 		if (node != null)
 			setChild(node);
-	}
-	
-	public void setChild(Node node) {
-		addChild(node);
-	}
-	
-	public Node getChild() {
-		return child;
 	}
 	
 	@Override
@@ -84,14 +78,6 @@ public class Bin extends Container {
 	}
 	
 	@Override
-	public List<Node> getChildren() {
-		list.clear();
-		if (child != null)
-			list.add(child);
-		return list;
-	}
-	
-	@Override
 	public Vector2dc getMinimumSize() {
 		if (child == null)
 			return Application.ZERO;
@@ -124,6 +110,14 @@ public class Bin extends Container {
 		return style;
 	}
 	
+	public void setChild(Node node) {
+		addChild(node);
+	}
+	
+	public Node getChild() {
+		return child;
+	}
+	
 	@Override
 	protected void addChild_impl(Node node) {
 		if (child != null)
@@ -135,5 +129,13 @@ public class Bin extends Container {
 	protected void removeChild_impl(Node node) {
 		assert child == node;
 		child = null;
+	}
+	
+	@Override
+	public List<Node> getChildren() {
+		list.clear();
+		if (child != null)
+			list.add(child);
+		return roView;
 	}
 }

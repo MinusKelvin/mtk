@@ -15,27 +15,21 @@ import static org.lwjgl.nanovg.NanoVG.*;
  * @author MinusKelvin
  */
 public class BinStyle extends Style<Bin> {
-	public final ObjectProperty<Position> alignment;
-	public final BooleanProperty expandX, expandY;
-	public final PaddingProperty padding;
-	public final FloatProperty borderSize;
-	public final ColorProperty borderColor;
-	public final ColorProperty backgroundColor;
+	public final ObjectProperty<Position> alignment = new ObjectProperty<>(false, Position.CENTER);
+	public final BooleanProperty expandX            = new BooleanProperty(true);
+	public final BooleanProperty expandY            = new BooleanProperty(true);
+	public final PaddingProperty padding            = new PaddingProperty(0, 0, 0, 0);
+	public final FloatProperty borderSize           = new FloatProperty(0);
+	public final ColorProperty borderColor          = new ColorProperty();
+	public final ColorProperty backgroundColor      = new ColorProperty(0, 0, 0, 0);
 	
 	public BinStyle() {
-		alignment = new ObjectProperty<>(false, Position.CENTER);
 		alignment.addListener(this::requestReflowCB);
-		expandX = new BooleanProperty(true);
 		expandX.addListener(this::requestReflowCB);
-		expandY = new BooleanProperty(true);
 		expandY.addListener(this::requestReflowCB);
-		padding = new PaddingProperty(0, 0, 0, 0);
 		padding.addListener(this::requestReflowCB);
-		borderSize = new FloatProperty(0);
 		borderSize.addListener(this::requestReflowCB);
-		borderColor = new ColorProperty();
 		borderColor.addListener(this::requestRenderCB);
-		backgroundColor = new ColorProperty(0, 0, 0, 0);
 		backgroundColor.addListener(this::requestRenderCB);
 	}
 	

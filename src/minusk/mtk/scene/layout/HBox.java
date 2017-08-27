@@ -8,12 +8,12 @@ import org.joml.Vector2dc;
 /**
  * @author MinusKelvin
  */
-public class VBox extends Box {
-	public VBox(Node... children) {
-		this(BoxStyle.VBOX_DEFAULT, children);
+public class HBox extends Box {
+	public HBox(Node... children) {
+		this(BoxStyle.HBOX_DEFAULT, children);
 	}
 	
-	public VBox(BoxStyle style, Node... children) {
+	public HBox(BoxStyle style, Node... children) {
 		super(style);
 		for (Node node : children)
 			addChild(node);
@@ -21,27 +21,23 @@ public class VBox extends Box {
 	
 	@Override
 	protected double getRelevantDimension(Vector2dc v) {
-		return v.y();
-	}
-	
-	@Override
-	protected double getOrthogonalDimension(Vector2dc v) {
 		return v.x();
 	}
 	
 	@Override
-	protected void orient(Vector2d v) {
-		double tmp = v.x;
-		v.x = v.y;
-		v.y = tmp;
+	protected double getOrthogonalDimension(Vector2dc v) {
+		return v.y();
 	}
+	
+	@Override
+	protected void orient(Vector2d v) {}
 	
 	@Override
 	protected boolean isCentralPosition(Position p) {
 		switch (p) {
-			case TOP_CENTER:
+			case CENTER_LEFT:
 			case CENTER:
-			case BOTTOM_CENTER:
+			case CENTER_RIGHT:
 				return true;
 		}
 		return false;
@@ -50,8 +46,8 @@ public class VBox extends Box {
 	@Override
 	protected boolean isHighPosition(Position p) {
 		switch (p) {
-			case TOP_RIGHT:
-			case CENTER_RIGHT:
+			case BOTTOM_LEFT:
+			case BOTTOM_CENTER:
 			case BOTTOM_RIGHT:
 				return true;
 		}

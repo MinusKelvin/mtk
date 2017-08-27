@@ -238,6 +238,8 @@ public abstract class Application {
 	
 	private static void pickFrom(Vector2dc pos, Stage stage) {
 		List<Node> nodes = stage.root.findNodesByPoint(new Vector2d(pos).sub(stage.getPosition()));
+		if (nodes.size() > 2)
+			nodes.size();
 		for (Node node : nodes) {
 			if (node.shouldReceiveMouseEvents())
 				mouseNode = node;

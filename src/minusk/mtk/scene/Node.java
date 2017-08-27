@@ -64,7 +64,7 @@ public abstract class Node {
 	}
 	
 	/**
-	 * Called when is node needs to reflow its children.
+	 * Called when this node needs to reflow its children.
 	 * Default implementation does nothing.
 	 */
 	protected void reflow() {}

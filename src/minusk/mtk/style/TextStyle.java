@@ -21,8 +21,8 @@ import static org.lwjgl.nanovg.NanoVG.*;
  */
 public class TextStyle extends Style<Text> {
 	public final ColorProperty color = new ColorProperty();
-	public final FloatProperty size = new FloatProperty(16);
-	public final FloatProperty blur = new FloatProperty();
+	public final FloatProperty size  = new FloatProperty(16);
+	public final FloatProperty blur  = new FloatProperty();
 	
 	public TextStyle() {
 		color.addListener(this::requestRenderCB);
